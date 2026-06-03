@@ -23,13 +23,7 @@ import subprocess
 import sys
 import requests
 
-# Determine path: C:\Users\YourName\AppData\Local\TechAce
-app_data_path = os.path.join(os.getenv('LOCALAPPDATA'), 'TechAce')
-os.makedirs(app_data_path, exist_ok=True)
-
-# Define paths
-CONFIG_FILE = os.path.join(app_data_path, "techace_config.json")
-COOKIE_FILE = os.path.join(app_data_path, "moodle_cookies.json")
+from paths import CONFIG_FILE, COOKIE_FILE
 
 @eel.expose
 def check_for_updates():

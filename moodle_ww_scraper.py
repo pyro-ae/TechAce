@@ -7,13 +7,7 @@ import random
 import eel
 import re  # ⚡ Added Regex import for the Course Extractor
 
-# Determine path: C:\Users\YourName\AppData\Local\TechAce
-app_data_path = os.path.join(os.getenv('LOCALAPPDATA'), 'TechAce')
-os.makedirs(app_data_path, exist_ok=True)
-
-# Define paths
-CONFIG_FILE = os.path.join(app_data_path, "techace_config.json")
-COOKIE_FILE = os.path.join(app_data_path, "moodle_cookies.json")
+from paths import CONFIG_FILE, COOKIE_FILE
 
 def run_moodle_spider(force_refresh=False):
     if os.path.exists(CONFIG_FILE):
