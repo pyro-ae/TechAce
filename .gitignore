@@ -1,0 +1,8 @@
+__pycache__/
+techace_chrome_data/
+techace_config.json
+moodle_cookies.json
+*.spec
+dist/
+build/
+.git/

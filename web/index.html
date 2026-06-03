@@ -1,0 +1,2458 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>TechAce</title>
+    <link rel="icon" href="penguin.png">
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        .app-container, .notebook-layout, .notebook-content {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        html[dir="rtl"] .notebook-tab {
+            border-radius: 12px 0 0 12px !important;
+            border-left: 1px solid var(--accent-color) !important;
+            border-right: none !important;
+        }
+
+            html[dir="rtl"] .notebook-tab.active {
+                box-shadow: -5px 0 15px rgba(0,0,0,0.5) !important;
+                padding-right: 20px !important;
+                padding-left: 15px !important;
+            }
+
+        html[dir="rtl"] .panel-left {
+            border-right: none !important;
+            border-left: 1px dashed rgba(255,255,255,0.15) !important;
+            padding-right: 0 !important;
+            padding-left: 25px !important;
+        }
+
+        html[dir="rtl"] .panel-right {
+            padding-left: 0 !important;
+            padding-right: 5px !important;
+        }
+
+        html[dir="rtl"] .task-meta {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="update-modal" style="display:none; position:fixed; z-index:9999; ...">
+        <h2>Update Available!</h2>
+        <p>A new version is ready. Click to download and install.</p>
+        <button onclick="downloadUpdate()">Download & Update</button>
+    </div>
+
+    <div id="wallpaper-layer"></div><div id="wallpaper-dimmer"></div><div id="toast" class="toast">Action Successful</div>
+
+    <div class="app-container">
+        <header style="position:relative; display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+            <img src="penguin.png" alt="Logo" style="height: 45px; filter: drop-shadow(0 0 15px var(--accent-color)); opacity: 0.9; transition: filter 0.3s ease; cursor: pointer;" onmouseover="this.style.filter='drop-shadow(0 0 25px var(--accent-color)) brightness(1.2)';" onmouseout="this.style.filter='drop-shadow(0 0 15px var(--accent-color))';">
+            <button onclick="toggleLang()" class="btn-small" style="position:absolute; top:0; right:10px; font-weight:bold; display:flex; align-items:center; gap:5px;"><i data-lucide="globe" style="width: 15px; height: 15px;"></i> EN / עב</button>
+        </header>
+
+        <div class="notebook-layout">
+            <div class="notebook-content">
+
+                <div id="view-dashboard" class="view-section active">
+                    <div class="main-layout" style="height: 100%; min-height: 0; overflow: hidden; display: flex; gap: 25px;">
+                        <div class="panel panel-left" style="flex: 1; border: none; border-right: 1px dashed rgba(255,255,255,0.15); background: transparent; box-shadow: none; border-radius: 0; padding-right: 25px; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+                            <div class="timer-container" style="flex-shrink: 0;">
+                                <h3 data-i18n="timer" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 5px;"><i data-lucide="timer"></i> <span class="t-text">FOCUS TIMER</span></h3>
+                                <div class="timer-display" id="timer-display">25:00</div>
+                                <div class="timer-controls">
+                                    <button class="btn-success btn-small" onclick="startTimer()"><i data-lucide="play"></i></button>
+                                    <button class="btn-danger btn-small" onclick="pauseTimer()"><i data-lucide="pause"></i></button>
+                                    <button class="btn-small" onclick="resetTimer()"><i data-lucide="rotate-ccw"></i></button>
+                                </div>
+                                <div class="custom-timer-container"><input type="number" id="custom-minutes" placeholder="Min" min="1" max="180"><button id="set-timer-btn" onclick="setCustomTimer()" data-i18n="set"><span class="t-text">Set</span></button></div>
+                            </div>
+                            <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 15px 0;">
+                            <div class="controls-row" style="flex-shrink: 0;">
+                                <select id="csv-dropdown" class="dropdown" onchange="loadSelectedCSV()"><option>Loading...</option></select>
+                                <button class="btn-success import-btn" onclick="importCSV()" style="padding: 10px;" title="Manual CSV Import"><i data-lucide="file-up"></i></button>
+                                <button class="btn-accent" onclick="document.getElementById('ai-schedule-modal').classList.add('active')" style="padding: 10px 15px; font-weight: bold;" title="AI Routine Architect"><i data-lucide="sparkles"></i> AI Forge</button>
+                                <button class="btn-accent" onclick="openGPAModal()" style="padding: 10px;" title="GPA Calculator"><i data-lucide="calculator"></i></button>
+                            </div>
+                            <div class="date-container" style="flex-shrink: 0;"><select id="date-dropdown" class="dropdown date-dropdown" onchange="updateDailyBlocks()"><option>Select Date</option></select><p id="location-text" class="location-text"><i data-lucide="map-pin"></i> Pending...</p></div>
+                            <div id="blocks-container" class="scrollable-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 5px;"></div>
+                        </div>
+
+                        <div class="panel panel-right" style="flex: 1; border: none; background: transparent; box-shadow: none; padding-left: 5px; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+                            <div class="radar-header" style="flex-shrink: 0; flex-wrap: wrap; gap: 10px;">
+                                <h2 data-i18n="deadlines"><i data-lucide="radar"></i> <span class="t-text">UPCOMING DEADLINES</span></h2>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <div style="display:flex; background:rgba(0,0,0,0.3); border:1px solid var(--card-border); border-radius:6px; overflow:hidden;">
+                                        <input type="text" id="lecture-search-input" placeholder="Panopto..." style="background:transparent; border:none; color:white; padding:5px 10px; width:140px; outline:none; font-size:0.8rem;" onkeydown="if(event.key === 'Enter') searchLectures()">
+                                        <button onclick="searchLectures()" style="background:var(--accent-color); border-radius:0; padding:5px 10px;"><i data-lucide="search" style="width:14px; height:14px;"></i></button>
+                                    </div>
+                                    <button class="btn-small" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
+                                    <button id="sync-btn" class="btn-small" onclick="triggerSync()" title="Sync HW"><i data-lucide="refresh-cw"></i></button>
+                                </div>
+                            </div>
+                            <div class="tabs" style="flex-shrink: 0;">
+                                <button class="tab active" onclick="switchTab(event, 'tab-moodle')" data-i18n="hw"><i data-lucide="file-text"></i> <span class="t-text">Homework</span></button>
+                                <button class="tab" onclick="switchTab(event, 'tab-ww')" data-i18n="ww"><i data-lucide="globe"></i> <span class="t-text">WebWork</span></button>
+                                <button class="tab" onclick="switchTab(event, 'tab-exams')" data-i18n="exams"><i data-lucide="graduation-cap"></i> <span class="t-text">Exams</span></button>
+                                <button class="tab" onclick="switchTab(event, 'tab-done')" data-i18n="done"><i data-lucide="check-circle"></i> <span class="t-text">Completed</span></button>
+                            </div>
+                            <div class="scrollable-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 5px;">
+                                <div id="tab-moodle" class="tab-content active"><button class="btn-success full-width" onclick="archiveMoodle()" data-i18n="archive"><i data-lucide="archive"></i> <span class="t-text">Archive Checked</span></button><h3 class="urgent-header" data-i18n="urgent"><i data-lucide="flame"></i> <span class="t-text">Urgent</span></h3><ul id="moodle-list-urgent" class="task-list"></ul><h3 class="upcoming-header" data-i18n="upcoming"><i data-lucide="calendar"></i> <span class="t-text">Upcoming</span></h3><ul id="moodle-list-upcoming" class="task-list"></ul></div>
+                                <div id="tab-ww" class="tab-content"><div style="display: flex; gap: 10px; margin-bottom: 15px;"><button class="btn-danger" style="flex: 1;" onclick="removeWW()"><i data-lucide="trash"></i> Remove</button></div><h3 class="urgent-header" data-i18n="urgent"><i data-lucide="flame"></i> <span class="t-text">Urgent</span></h3><ul id="ww-list-urgent" class="task-list"></ul><h3 class="upcoming-header" data-i18n="upcoming"><i data-lucide="calendar"></i> <span class="t-text">Upcoming</span></h3><ul id="ww-list-upcoming" class="task-list"></ul></div>
+                                <div id="tab-exams" class="tab-content"><div id="exam-list" class="exam-grid"></div></div>
+                                <div id="tab-done" class="tab-content"><ul id="done-list" class="task-list"></ul></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-vault" class="view-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="margin: 0; display:flex; align-items:center; gap:10px;" data-i18n="vault"><i data-lucide="hard-drive"></i> <span class="t-text">Vault Explorer</span></h2>
+                        <button onclick="showHarvestWarning()" class="btn-danger" data-i18n="harvest"><i data-lucide="download-cloud"></i> <span class="t-text">Mass-Harvest Moodle</span></button>
+                    </div>
+                    <div class="vault-grid" style="flex: 1; overflow: hidden; min-height: 0;">
+                        <div class="vault-sidebar scrollable-area" id="vault-sidebar"></div>
+                        <div class="vault-main" style="display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+                            <div id="vault-breadcrumbs" style="background: rgba(0,0,0,0.5); padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; display:flex; align-items: center; gap: 8px; font-weight: bold; overflow-x: auto;"><span style="color:var(--accent-color); cursor:pointer;" onclick="navigateVaultTo(-1)"><i data-lucide="home" style="width:16px;height:16px;"></i> Root</span></div>
+                            <div id="vault-main-grid" class="vault-file-grid scrollable-area" style="padding-right: 10px; padding-bottom: 20px; align-content: start;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-studio" class="view-section" style="padding: 30px; overflow-y: auto; height: 100%; box-sizing: border-box;">
+                    <div style="max-width: 900px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px;">
+
+                        <!-- Top Control Dashboard -->
+                        <div style="background: #151922; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 30px;">
+                            <h2 style="color: white; margin-top: 0; font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                                <i data-lucide="cpu" style="color: var(--accent-color); width: 28px; height: 28px;"></i> <span class="t-text" data-i18n="forge">AI Academic Study Forge</span>
+                            </h2>
+                            <p class="t-text" data-i18n="forge_sub" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-top: 8px; margin-bottom: 25px;">Select an active course. The AI will instantly construct a secure, timed mock examination tailored to that subject's curriculum.</p>
+
+                            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; align-items: flex-end; margin-bottom: 20px;">
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold;" class="t-text" data-i18n="forge_courses">Autoscanned Courses</label>
+                                    <select id="forge-topic-select" dir="auto" style="width:100%; background:#11141b; color:white; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); outline:none;">
+                                        <option value="">Loading courses...</option>
+                                    </select>
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold;" class="t-text" data-i18n="forge_difficulty">Difficulty</label>
+                                    <select id="forge-difficulty-select" style="width:100%; background:#11141b; color:white; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); outline:none;">
+                                        <option value="easy" class="t-text" data-i18n="diff_easy">Easy</option>
+                                        <option value="medium" selected class="t-text" data-i18n="diff_med">Medium</option>
+                                        <option value="hard" class="t-text" data-i18n="diff_hard">Hard</option>
+                                        <option value="expert" class="t-text" data-i18n="diff_exp">Expert (Exam Level)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold;" class="t-text" data-i18n="forge_q_count">Number of Questions</label>
+                                    <input type="number" id="forge-q-count" value="5" min="1" max="20" style="width:100%; background:#11141b; color:white; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); outline:none;">
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold;" class="t-text" data-i18n="forge_duration">Duration Limit</label>
+                                    <select id="forge-time-select" style="width:100%; background:#11141b; color:white; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); outline:none;">
+                                        <option value="300" class="t-text" data-i18n="forge_time_5">5 Minutes</option>
+                                        <option value="900" class="t-text" data-i18n="forge_time_15">15 Minutes</option>
+                                        <option value="1800" selected class="t-text" data-i18n="forge_time_30">30 Minutes</option>
+                                        <option value="3600" class="t-text" data-i18n="forge_time_60">60 Minutes</option>
+                                        <option value="7200" class="t-text" data-i18n="forge_time_120">120 Minutes</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ⚡ Only ONE unified button here! -->
+                            <button id="forge-generate-btn" class="btn-accent" onclick="generateSecureForgeTest()" style="height: 46px; width: 100%; font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px;">
+                                <i data-lucide="sparkles"></i> <span class="t-text" data-i18n="forge_btn">Forge AI Test</span>
+                            </button>
+                        </div>
+
+                        <div id="forge-exam-environment" style="display: none; background: #151922; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 30px; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 20px; margin-bottom: 25px;">
+                                <div>
+                                    <span class="t-text" data-i18n="forge_in_prog" style="background: rgba(0, 229, 255, 0.1); border: 1px solid #00E5FF; color: #00E5FF; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">EXAM IN PROGRESS</span>
+                                    <h3 id="forge-current-title" dir="auto" style="color: white; margin: 12px 0 0 0; font-size: 1.4rem;">Course Title</h3>
+                                </div>
+                                <div style="background: #11141b; border: 2px solid #FF0055; border-radius: 12px; padding: 12px 25px; text-align: center; box-shadow: 0 0 20px rgba(255,0,85,0.15);">
+                                    <div class="t-text" data-i18n="forge_time" style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 800; letter-spacing: 0.5px;">Time Remaining</div>
+                                    <div id="forge-countdown-clock" style="font-size: 1.8rem; font-weight: 900; color: white; font-family: monospace;">00:00</div>
+                                </div>
+                            </div>
+
+                            <form id="forge-quiz-form" dir="auto" onsubmit="event.preventDefault();" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;"></form>
+
+                            <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 25px; display: flex; justify-content: flex-end; gap: 15px;">
+                                <button class="btn-small" onclick="abandonForgeExam()" style="background: rgba(255,255,255,0.05); padding: 10px 20px; font-weight: bold;"><span class="t-text" data-i18n="forge_cancel">Cancel Exam</span></button>
+                                <button class="btn-accent" onclick="turnInForgeExam()" style="background: #38B000; box-shadow: 0 4px 15px rgba(56,176,0,0.3); padding: 10px 30px; font-weight: 800; display:flex; align-items:center; gap:8px;">
+                                    <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i> <span class="t-text" data-i18n="forge_turnin">Turn In Test</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="forge-grading-panel" style="display: none; background: #11141b; border: 2px solid rgba(56,176,0,0.3); border-radius: 14px; padding: 40px; text-align: center;">
+                            <div style="width: 90px; height: 90px; background: rgba(56,176,0,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 2px solid #38B000;">
+                                <i data-lucide="award" style="color: #38B000; width: 45px; height: 45px;"></i>
+                            </div>
+                            <h3 class="t-text" data-i18n="forge_eval" style="color: white; margin: 0; font-size: 1.8rem; font-weight: 800;">Examination Evaluated!</h3>
+                            <p class="t-text" data-i18n="forge_eval_sub" style="color: var(--text-muted); font-size: 1rem; margin: 8px 0 25px 0;">Your answers have been computed against the verification database.</p>
+
+                            <div style="font-size: 4rem; font-weight: 900; color: #38B000; margin-bottom: 5px;" id="forge-final-score">0 / 0</div>
+                            <div id="forge-score-percentage" style="color: white; font-weight: bold; margin-bottom: 30px; font-size: 1.2rem;">(100%)</div>
+
+                            <button class="btn-accent" onclick="dismissForgeGrading()" style="padding: 12px 30px; font-weight: bold; border-radius: 8px;"><span class="t-text" data-i18n="forge_return">Return to Dashboard</span></button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="view-logistics" class="view-section">
+                    <div style="display:flex; flex-direction:column; height:100%; min-height: 0;">
+                        <h2 style="margin: 0 0 15px 0;" data-i18n="log"><i data-lucide="map"></i> <span class="t-text">Logistics Hub</span></h2>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-shrink: 0;">
+                            <input type="text" id="logistics-search-bar" data-i18n-p="search_log" placeholder="Search campus..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.5); color: white; font-size: 1rem;" onkeydown="if(event.key === 'Enter') executeCampusSearch()">
+                            <button class="btn-accent" onclick="executeCampusSearch()" style="padding: 0 25px; border-radius: 8px; font-weight: bold;"><i data-lucide="search"></i></button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; flex: 1; min-height: 0;">
+                            <div class="glass-card" style="background: rgba(0,0,0,0.4); border: 1px solid var(--card-border); padding: 20px; display: flex; flex-direction: column; min-height: 0; border-radius: 12px;">
+                                <h3 style="color: var(--accent-color); margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;"><i data-lucide="info"></i> Explorer Intelligence</h3>
+                                <div id="logistics-results" class="scrollable-area" style="font-size: 0.95rem; line-height: 1.6; flex: 1;"></div>
+                                <div style="display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.15); flex-shrink: 0;">
+                                    <button class="btn-accent" style="flex: 1;" onclick="openChromelessWindow('https://moovitapp.com/israel/he/public_transport-lines-haifa-1721')" data-i18n="moovit"><i data-lucide="bus"></i> <span class="t-text">Moovit</span></button>
+                                    <button class="btn-success" style="flex: 1;" onclick="openChromelessWindow('https://www.rail.co.il/')" data-i18n="rail"><i data-lucide="train"></i> <span class="t-text">Railways</span></button>
+                                </div>
+                            </div>
+                            <div style="position: relative; border-radius: 12px; border: 1px solid var(--card-border); overflow: hidden; z-index: 1; display: flex; flex-direction: column;">
+                                <div id="campus-map" style="width: 100%; height: 100%; background: #111; flex: 1;"></div>
+
+                                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                                    <div style="background: rgba(255, 204, 0, 0.15); padding: 20px; border-radius: 50%; margin-bottom: 15px; border: 2px solid #ffcc00; box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);">
+                                        <i data-lucide="hard-hat" style="width: 45px; height: 45px; color: #ffcc00;"></i>
+                                    </div>
+                                    <h2 style="color: white; margin: 0 0 8px 0; font-size: 1.6rem; font-weight: 900; letter-spacing: 2px;">UNDER CONSTRUCTION</h2>
+                                    <p style="color: #ffcc00; font-weight: bold; margin: 0; font-size: 0.95rem; text-transform: uppercase;">Map Engine Offline for GPS Calibration</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-network" class="view-section">
+                    <div class="network-layout">
+
+                        <div class="network-sidebar">
+                            <div class="net-user-profile-card" id="net-my-profile-card">
+                                <div class="avatar-circle" id="my-avatar-indicator" style="background: var(--accent-color);">?</div>
+                                <div style="display:flex; flex-direction:column;">
+                                    <span id="my-profile-name-str" style="font-weight:700; color:white; font-size:0.95rem;">Loading Account...</span>
+                                    <span style="font-size:0.75rem; color:#38B000; display:flex; align-items:center; gap:4px;">
+                                        <span style="width:6px; height:6px; background:#38B000; border-radius:50%;"></span> Active Online
+                                    </span>
+                                </div>
+                                <div style="margin-left: auto; display: flex; gap: 5px;">
+                                    <button class="chat-action-icon-btn" onclick="openProfileCustomizerModal()" title="Customize Profile"><i data-lucide="palette" style="width:16px; height:16px;"></i></button>
+                                    <button class="chat-action-icon-btn" onclick="triggerCustomLogoutModal()" title="Change Account Profile"><i data-lucide="log-out" style="width:16px; height:16px;"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="net-scroll-list">
+                                <div class="net-section-header">Global Spaces</div>
+                                <button class="chat-row-btn active" id="btn-room-general" onclick="switchActiveChatRoom('general')">
+                                    <i data-lucide="globe"></i>
+                                    <div style="display:flex; flex-direction:column; text-align:left;">
+                                        <span style="font-weight:600; color:white; font-size:0.9rem;">General Hub</span>
+                                        <span style="font-size:0.75rem; color:var(--text-muted);">Shared Application Link</span>
+                                    </div>
+                                </button>
+
+                                <div class="net-section-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span>Private Direct Messages</span>
+                                    <i data-lucide="plus" style="width:14px; height:14px; cursor:pointer; color:var(--text-muted);" onclick="promptNewPrivateChat()" title="Start Private Message"></i>
+                                </div>
+                                <div id="direct-messages-pool-list"></div>
+                            </div>
+
+                            <div style="padding:12px 15px; border-top:1px solid var(--card-border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
+                                <span style="color:#38B000; display:flex; align-items:center; gap:6px; font-weight:600;">
+                                    <span style="width:8px; height:8px; background:#38B000; border-radius:50%; box-shadow:0 0 6px #38B000;"></span> Network Engine Online
+                                </span>
+                                <span style="color:var(--text-muted); font-size:0.75rem; font-weight:700;">V7.1 Cloud</span>
+                            </div>
+                        </div>
+
+                        <div class="network-chat-area" id="net-chat-main-interface-wrapper">
+
+                            <div id="net-auth-setup-overlay" class="net-auth-screen" style="display:none;">
+                                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:35px; border-radius:16px; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+                                    <i data-lucide="shield-check" style="width:48px; height:48px; color:#38B000; margin-bottom:15px;"></i>
+                                    <h3 style="color:white; margin:0 0 5px 0; font-size:1.4rem;">Technion Secure Auth</h3>
+                                    <p id="auth-linked-email-display" style="color:var(--accent-color); font-size:0.85rem; font-weight:bold; margin-bottom:15px;"></p>
+                                    <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Your academic identity is verified. Choose a display handle for the network.</p>
+                                    <input type="text" id="net-username-register-input" placeholder="Enter display name..." style="width:100%; padding:12px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid var(--card-border); color:white; font-size:1rem; outline:none; text-align:center; box-sizing:border-box; margin-bottom:15px;">
+                                    <button class="btn-success full-width" style="padding:12px;" onclick="commitNetworkRegistrationAccount()">Join Network Ecosystem</button>
+                                </div>
+                            </div>
+
+                            <div id="net-active-call-suite-panel" class="call-overlay-panel" style="display:none;">
+                                <div id="video-streams-wrapper" style="display: none; position: relative; justify-content: center; align-items: center; width: 100%; max-width: 850px; margin-bottom: 20px;">
+                                    <video id="remote-video-feed" autoplay playsinline style="display: none; width: 100%; max-height: 500px; background: #000; border-radius: 12px; border: 2px solid var(--accent-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain;"></video>
+
+                                    <video id="local-webcam-feed" autoplay playsinline muted style="display: none; position: absolute; bottom: 20px; right: 20px; width: 180px; background: #000; border-radius: 10px; border: 3px solid #38B000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: cover; z-index: 10;"></video>
+                                </div>
+
+                                <div class="avatar-circle" id="call-panel-avatar-icon" style="width:80px; height:80px; font-size:2rem; background: var(--accent-color);">?</div>
+                                <div>
+                                    <h3 id="call-panel-target-identity" style="color:white; margin:0 0 5px 0; font-size:1.4rem;">User Identity</h3>
+                                    <p id="call-panel-status-ticker" style="color:var(--accent-color); font-weight:600; margin:0; font-size:0.9rem; letter-spacing:1px;">ESTABLISHING ENCRYPTED UPLINK...</p>
+                                </div>
+
+                                <div class="call-device-settings-grid">
+                                    <div class="call-device-select-group">
+                                        <label><i data-lucide="mic" style="width:12px; height:12px; vertical-align:middle;"></i> Microphone Input</label>
+                                        <select id="call-mic-select-dropdown" onchange="switchHardwareDevice('mic')"><option value="default">Default System Mic</option></select>
+                                    </div>
+                                    <div class="call-device-select-group">
+                                        <label><i data-lucide="video" style="width:12px; height:12px; vertical-align:middle;"></i> Camera Input</label>
+                                        <select id="call-cam-select-dropdown" onchange="switchHardwareDevice('cam')"><option value="default">Default Camera</option></select>
+                                    </div>
+                                    <div class="call-device-select-group">
+                                        <label><i data-lucide="volume-2" style="width:12px; height:12px; vertical-align:middle;"></i> Audio Output</label>
+                                        <select id="call-speaker-select-dropdown" onchange="switchHardwareDevice('speaker')"><option value="default">Default Audio Output</option></select>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:15px; margin-top:10px;">
+                                    <button class="chat-action-icon-btn" style="background:rgba(255,255,255,0.05); padding:12px; color:white;" id="btn-call-toggle-mic" onclick="toggleCallMicrophone()"><i data-lucide="mic"></i></button>
+                                    <button class="chat-action-icon-btn" style="background:rgba(255,255,255,0.05); padding:12px; color:white;" id="btn-call-toggle-vid" onclick="toggleCallVideoCamera()"><i data-lucide="video"></i></button>
+                                    <button class="chat-action-icon-btn" style="background:rgba(255,255,255,0.05); padding:12px; color:white;" id="btn-call-toggle-share" onclick="toggleCallScreenSharing()" title="Share Display Screen"><i data-lucide="monitor"></i></button>
+                                    <button class="chat-action-icon-btn" style="background:#FF0055; padding:12px 25px; border-radius:30px; color:white; display:flex; align-items:center; gap:8px; font-weight:700;" onclick="terminateActiveNetworkCall()"><i data-lucide="phone-off"></i> Disconnect</button>
+                                </div>
+                            </div>
+
+                            <div id="net-core-chat-window-viewport" style="display:flex; flex-direction:column; height:100%;">
+                                <div class="network-chat-header">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div class="avatar-circle" id="active-room-title-avatar" style="width:34px; height:34px; background:rgba(255,255,255,0.1); color:var(--accent-color);">#</div>
+                                        <span id="active-room-header-title-string" style="font-weight:700; color:white; font-size:1.05rem;">General Hub</span>
+                                    </div>
+                                    <div class="chat-header-actions" id="chat-header-action-buttons-wrapper" style="display: none;">
+                                        <button class="chat-action-icon-btn" onclick="initializeNetworkCallProtocol('voice')" title="Start Secure Voice Call"><i data-lucide="phone" style="width:20px; height:20px;"></i></button>
+                                        <button class="chat-action-icon-btn" onclick="initializeNetworkCallProtocol('video')" title="Start Face Video Stream"><i data-lucide="video" style="width:20px; height:20px;"></i></button>
+                                    </div>
+                                </div>
+
+                                <div class="network-messages" id="cloud-chat-box"></div>
+
+                                <div class="network-input-box">
+                                    <input type="file" id="cloud-file-input" style="display: none;" onchange="processFileAttachmentUploadSelection(this)">
+                                    <button id="cloud-attach-btn" class="chat-action-icon-btn" style="color:var(--text-muted); background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:8px; padding:10px 12px;" onclick="document.getElementById('cloud-file-input').click()" title="Attach image or file documents">
+                                        <i data-lucide="paperclip" style="width:18px; height:18px;"></i>
+                                    </button>
+                                    <input type="text" id="cloud-msg-input" placeholder="Type a message or share documents/links...">
+                                    <button id="cloud-send-btn" class="btn-accent" style="border-radius:8px; padding:10px 16px;" onclick="sendNetworkMessage()"><i data-lucide="send" style="width:16px; height:16px;"></i></button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="notebook-tabs">
+                <button class="notebook-tab active" onclick="switchMainView('dashboard', this)"><i data-lucide="layout-dashboard"></i></button>
+                <button class="notebook-tab" onclick="switchMainView('vault', this)"><i data-lucide="folder-open"></i></button>
+                <button class="notebook-tab" onclick="openChromelessWindow('https://moodle25.technion.ac.il/my/')"><i data-lucide="globe"></i></button>
+                <button class="notebook-tab" onclick="switchMainView('studio', this)"><i data-lucide="sparkles"></i></button>
+                <button class="notebook-tab" onclick="switchMainView('logistics', this)"><i data-lucide="map"></i></button>
+                <button class="notebook-tab" onclick="switchMainView('network', this)"><i data-lucide="users"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="harvest-progress-modal" class="modal-overlay"><div class="modal-content" style="width: 500px; text-align: center;"><h2 style="color: var(--accent-color); margin-bottom: 15px;"><i data-lucide="loader" class="spin"></i> Override Active</h2><p id="harvest-status-text" style="color: var(--text-main); font-weight: bold;">Connecting...</p><div style="width: 100%; background: rgba(255,255,255,0.1); height: 20px; border-radius: 10px; overflow: hidden; margin-bottom: 10px;"><div id="harvest-progress-bar" style="width: 0%; height: 100%; background: var(--accent-color); transition: 0.3s;"></div></div><div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);"><span id="harvest-pct-text">0%</span><span id="harvest-eta-text">ETA...</span></div></div></div>
+    <div id="harvest-warning" class="modal-overlay"><div class="modal-content" style="text-align: center; width: 450px;"><div style="display: flex; justify-content: center;"><i data-lucide="alert-triangle" style="width: 50px; height: 50px; color: #FF0055; margin-bottom: 15px;"></i></div><h2 style="justify-content: center; color: #FF0055;">Warning</h2><p style="color: var(--text-muted); margin-bottom: 25px;">This command will force the spider to enter <b>every course</b> on your Moodle and rip <b>every file</b>. Proceed?</p><div style="display: flex; gap: 10px;"><button class="btn-small" onclick="document.getElementById('harvest-warning').classList.remove('active')" style="flex:1;">Cancel</button><button class="btn-danger" onclick="triggerHarvest()" style="flex:1;">Initiate Protocol</button></div></div></div>
+
+    <button class="ai-fab" onclick="toggleChat()"><i data-lucide="bot"></i></button>
+    <div id="chat-overlay" onclick="closeChatOverlay(event)"><div id="chat-panel" class="chat-panel glass-card" onclick="event.stopPropagation()"><div class="chat-header"><h3 style="display: flex; align-items: center; gap: 10px; margin: 0;"><i data-lucide="bot" style="color: var(--accent-color);"></i> TechAce Tutor</h3><button class="close-chat" style="background:transparent; border:none; color:white; cursor:pointer;" onclick="toggleChat()"><i data-lucide="x"></i></button></div><div id="chat-history" class="chat-history"><div class="chat-msg msg-ai">Hello! I am your TechAce AI. Ask me to explain a concept!</div></div><div class="chat-input-area"><button onclick="sendClipboardToAI()" style="background: #38B000; margin-right: 8px;"><i data-lucide="camera"></i></button><textarea id="chat-input" placeholder="Type answer... (Shift+Enter for line)" onkeydown="handleChatKey(event)"></textarea><button onclick="sendChatMessage()"><i data-lucide="send"></i></button></div></div></div>
+    <div id="exam-modal" class="modal-overlay" onclick="closeExamOverlay(event)"><div class="modal-content" style="width: 90vw; height: 90vh; max-width: 1400px; padding: 15px; display: flex; flex-direction: column;" onclick="event.stopPropagation()"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;"><h2 id="exam-title" style="margin: 0; color: var(--accent-color);">Viewer</h2><button onclick="closeExam()" style="background: #FF0055; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">✕ Close</button></div><iframe id="exam-frame" src="" style="flex: 1; width: 100%; border: none; border-radius: 8px; background: #fff;"></iframe></div></div>
+
+    <div id="gpa-modal" class="modal-overlay" onclick="closeGPAOverlay(event)"><div class="modal-content" style="width: 500px; display: flex; flex-direction: column;" onclick="event.stopPropagation()"><h2 style="margin-bottom: 20px;" data-i18n="gpa"><i data-lucide="calculator"></i> <span class="t-text">GPA Calculator</span></h2><div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.4); padding:20px; border-radius:12px; margin-bottom:15px; border:1px solid var(--accent-color);"><div><div style="font-size:0.85rem; color:var(--text-muted);">Current Average (ממוצע)</div><div id="gpa-display" style="font-size:2.8rem; font-weight:800; color:var(--accent-color);">0.00</div></div><div style="text-align:right;"><div style="font-size:0.85rem; color:var(--text-muted);">Total Credits (נק"ז)</div><div id="credits-display" style="font-size:1.8rem; font-weight:600; color:white;">0.0</div></div></div><button class="btn-success full-width" onclick="importGradesCSV()"><i data-lucide="file-spreadsheet"></i> Import CSV</button><div style="margin-top: 15px; max-height:250px; overflow-y:auto; padding-right: 5px;" class="scrollable-area"><table style="width:100%; border-collapse: collapse; font-size:0.95rem; text-align:left;"><thead><tr style="border-bottom: 1px solid var(--card-border); color:var(--text-muted);"><th style="padding:8px;">Course</th><th style="padding:8px;">Grade</th><th style="padding:8px;">Credits</th></tr></thead><tbody id="gpa-course-list"><tr><td colspan="3" style="text-align:center; padding:15px;">No grades.</td></tr></tbody></table></div><div class="modal-actions" style="margin-top:20px;"><button class="btn-small full-width" onclick="closeGPAModal()">Close</button></div></div></div>
+
+    <div id="auth-2fa-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 420px; text-align: center; background: #151922; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                <div style="width: 80px; height: 80px; background: rgba(92, 133, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--accent-color); animation: pulse 2s infinite;">
+                    <i data-lucide="smartphone" style="width: 40px; height: 40px; color: var(--accent-color);"></i>
+                </div>
+            </div>
+            <h2 style="color: white; margin-top:0; font-size: 1.6rem; font-weight: 800;">Authenticator Required</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 25px;">Open the Microsoft Authenticator app on your phone and enter the number below to approve the Sync.</p>
+
+            <div style="background: rgba(0,0,0,0.4); border: 2px dashed var(--accent-color); border-radius: 12px; padding: 30px; margin-bottom: 25px;">
+                <div id="auth-2fa-number" style="font-size: 4.5rem; font-weight: 900; color: white; letter-spacing: 5px; line-height: 1; text-shadow: 0 0 20px var(--accent-color);">--</div>
+            </div>
+
+            <p style="color: #38B000; font-weight: bold; font-size: 0.9rem; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i data-lucide="loader" class="spin" style="width:18px; height:18px;"></i> Awaiting Phone Approval...
+            </p>
+        </div>
+    </div>
+
+    <style>
+        .dark-picker {
+            color-scheme: dark !important;
+            background: #11141b !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+            outline: none !important;
+            font-family: var(--font-family) !important;
+            padding: 10px 12px !important;
+            border-radius: 8px !important;
+        }
+
+            .dark-picker:focus {
+                border-color: var(--accent-color) !important;
+                box-shadow: 0 0 10px rgba(92, 133, 255, 0.2) !important;
+            }
+
+        .day-toggle {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+            .day-toggle:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .day-toggle.active {
+                background: var(--accent-color);
+                color: white;
+                border-color: var(--accent-color);
+                box-shadow: 0 0 15px rgba(92, 133, 255, 0.4);
+            }
+
+        ::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(0.8);
+            cursor: pointer;
+        }
+    </style>
+
+    <div id="ai-schedule-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 650px; background: #151922; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+            <h2 style="color: white; margin-top:0; font-size: 1.5rem; display:flex; align-items:center; gap:10px;"><i data-lucide="calendar-clock" style="color:var(--accent-color);"></i> <span class="t-text" data-i18n="routine_title">AI Routine Architect</span></h2>
+            <p class="t-text" data-i18n="routine_sub" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Set your routine parameters and mark your days off. The AI will weave your curriculum into the remaining time.</p>
+
+            <div id="ai-sched-phases-container" dir="auto" style="display:flex; flex-direction:column; gap:20px; max-height: 55vh; overflow-y: auto; padding-right: 10px; margin-bottom: 15px;">
+
+                <div class="phase-card" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="color:var(--accent-color); margin:0; font-size: 1.1rem;">Phase 1</h3>
+                        <button class="btn-danger btn-small" onclick="if(document.querySelectorAll('.phase-card').length > 1) this.closest('.phase-card').remove(); else showToast('Need at least 1 phase!', '#FF0055');"><i data-lucide="trash-2"></i></button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="input-group" style="margin:0;"><label class="t-text" data-i18n="routine_start">Start Date</label><input type="date" class="dark-picker phase-start" style="width:100%;"></div>
+                        <div class="input-group" style="margin:0;"><label class="t-text" data-i18n="routine_end">End Date</label><input type="date" class="dark-picker phase-end" style="width:100%;"></div>
+                        <div class="input-group" style="grid-column: span 2; margin:0;"><label class="t-text" data-i18n="routine_loc">Location</label><input type="text" class="dark-picker phase-loc" value="Haifa (Phase 1)" style="width:100%;"></div>
+                    </div>
+
+                    <div class="input-group" style="margin:0;">
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="t-text" data-i18n="routine_blocks">Daily Time Blocks</span>
+                            <button class="btn-small" onclick="addScheduleBlock(this)" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="plus" style="width:12px;height:12px;"></i> <span class="t-text" data-i18n="routine_add_block">Add Block</span></button>
+                        </label>
+                        <div class="blocks-container" style="display:flex; flex-direction:column; gap:10px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="block-row" style="display:grid; grid-template-columns: auto auto 1fr auto; gap:10px; align-items:center;">
+                                <input type="time" class="dark-picker start-time" value="05:30" style="padding: 8px !important; width: 110px;">
+                                <input type="time" class="dark-picker end-time" value="08:30" style="padding: 8px !important; width: 110px;">
+                                <input type="text" class="dark-picker block-name" value="Heavy Vanguard" data-i18n-p="block_name_placeholder" placeholder="Block Name" style="padding: 8px !important; width: 100%;">
+                                <button class="btn-danger" onclick="if(this.closest('.blocks-container').querySelectorAll('.block-row').length>1) this.parentElement.remove();" style="padding: 8px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <div class="block-row" style="display:grid; grid-template-columns: auto auto 1fr auto; gap:10px; align-items:center;">
+                                <input type="time" class="dark-picker start-time" value="10:00" style="padding: 8px !important; width: 110px;">
+                                <input type="time" class="dark-picker end-time" value="13:00" style="padding: 8px !important; width: 110px;">
+                                <input type="text" class="dark-picker block-name" value="Execution & Applied" data-i18n-p="block_name_placeholder" placeholder="Block Name" style="padding: 8px !important; width: 100%;">
+                                <button class="btn-danger" onclick="if(this.closest('.blocks-container').querySelectorAll('.block-row').length>1) this.parentElement.remove();" style="padding: 8px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-small full-width" onclick="addSchedulePhase()" style="border: 2px dashed var(--accent-color); background: rgba(157, 78, 221, 0.1); color: var(--accent-color); padding: 12px; margin-bottom: 15px; font-weight: 800; font-size: 0.95rem;">
+                <i data-lucide="plus-circle"></i> Add Another Phase (Date Range)
+            </button>
+
+            <div class="input-group">
+                <label class="t-text" data-i18n="routine_rest">Select Rest Days (AI will mark these as SYSTEM OFFLINE)</label>
+                <div dir="ltr" style="display: flex; gap: 10px; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);" id="ai-sched-days-off">
+                    <div class="day-toggle" onclick="this.classList.toggle('active')" data-day="Sunday"><span class="t-text" data-i18n="day_sun">Sun</span></div>
+                    <div class="day-toggle" onclick="this.classList.toggle('active')" data-day="Monday"><span class="t-text" data-i18n="day_mon">Mon</span></div>
+                    <div class="day-toggle" onclick="this.classList.toggle('active')" data-day="Tuesday"><span class="t-text" data-i18n="day_tue">Tue</span></div>
+                    <div class="day-toggle" onclick="this.classList.toggle('active')" data-day="Wednesday"><span class="t-text" data-i18n="day_wed">Wed</span></div>
+                    <div class="day-toggle" onclick="this.classList.toggle('active')" data-day="Thursday"><span class="t-text" data-i18n="day_thu">Thu</span></div>
+                    <div class="day-toggle active" onclick="this.classList.toggle('active')" data-day="Friday"><span class="t-text" data-i18n="day_fri">Fri</span></div>
+                    <div class="day-toggle active" onclick="this.classList.toggle('active')" data-day="Saturday"><span class="t-text" data-i18n="day_sat">Sat</span></div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-small" onclick="document.getElementById('ai-schedule-modal').classList.remove('active')"><span class="t-text" data-i18n="routine_cancel">Cancel</span></button>
+                <button id="btn-forge-routine" class="btn-accent" onclick="triggerAIScheduleForge()" style="font-weight: 800; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="sparkles"></i> <span class="t-text" data-i18n="routine_gen">Select Files & Generate</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 data-i18n="settings"><i data-lucide="settings"></i> <span class="t-text">System Settings</span></h2>
+            <div class="settings-grid">
+                <div class="input-group"><label>Email</label><input type="text" id="email-input"></div><div class="input-group"><label>Password</label><input type="password" id="password-input"></div>
+                <div class="input-group"><label>Moodle .ics</label><input type="text" id="moodle-input"></div><div class="input-group"><label>Cheesefork .ics</label><input type="text" id="cheesefork-input"></div>
+                <div class="input-group" style="grid-column: span 2;"><label>Gemini API</label><input type="password" id="gemini-input"></div><div class="input-group" style="grid-column: span 2;"><label>Transit API</label><input type="password" id="transit-input"></div>
+                <div class="input-group"><label>Background</label><input type="color" id="bg-color-input" style="height:38px; padding:2px; cursor:pointer;" oninput="previewTheme()"></div>
+                <div class="input-group"><label>Card Color</label><input type="color" id="card-bg-input" style="height:38px; padding:2px; cursor:pointer;" oninput="previewTheme()"></div>
+                <div class="input-group"><label>Accent Color</label><input type="color" id="accent-color-input" style="height:38px; padding:2px; cursor:pointer;" oninput="previewTheme()"></div>
+                <div class="input-group"><label>System Font</label><select id="font-input" onchange="previewTheme()"><option value="'Inter', sans-serif">Inter</option><option value="'Courier New', Courier, monospace">Courier</option></select></div>
+                <div class="input-group" style="grid-column: span 2;"><label><i data-lucide="image"></i> Custom Wallpaper</label><div style="display: flex; gap: 5px;"><input type="text" id="wallpaper-input" disabled><button class="btn-small" onclick="browseWallpaper()"><i data-lucide="folder"></i></button></div></div>
+                <div class="input-group"><label>Dimmer</label><input type="range" id="dimmer-input" min="0" max="1" step="0.05" oninput="previewTheme()"></div><div class="input-group"><label>Transparency</label><input type="range" id="card-opacity-input" min="0" max="1" step="0.05" oninput="previewTheme()"></div>
+                <div class="input-group" style="grid-column: span 2;"><label><i data-lucide="globe"></i> Moodle Links:</label><select id="browser-mode-input"><option value="in_app">App Window</option><option value="system">Windows Default</option></select></div>
+            </div>
+            <div class="modal-actions"><button class="btn-danger" onclick="resetAppearance()"><i data-lucide="rotate-ccw"></i> Reset</button><button class="btn-small" onclick="closeSettings()">Cancel</button><button class="btn-accent" onclick="saveSettings()">Save</button></div>
+        </div>
+    </div>
+
+    <!-- ⚡ V7.9 LITERAL PICTURE & PROFILE CUSTOMIZER OVERHAUL -->
+    <!-- ⚡ V8.2 TRUE DISCORD CUSTOMIZER WITH OVERLAPPING AVATAR -->
+    <div id="net-profile-customizer-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 500px; padding: 25px; background: #151922; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; display: block;">
+            <h2 style="color: white; margin-top:0; font-size: 1.4rem; font-weight: 800; display:flex; align-items:center; gap:10px;"><i data-lucide="palette" style="color:var(--accent-color);"></i> Profile Customization</h2>
+
+            <!-- Real-time Live Preview Screen (DISCORD STYLE) -->
+            <div style="background: #11141b; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); display: block;">
+                <!-- The Banner (Full Width, Fixed Height) -->
+                <div id="customizer-banner-preview" style="height: 120px; width: 100%; display: block; background-color: #9d4edd; background-size: cover; background-position: center; border-bottom: 1px solid rgba(255,255,255,0.02);"></div>
+
+                <!-- The Info Section -->
+                <div style="position: relative; padding: 0 16px 16px 16px; display: block;">
+                    <!-- The Avatar (Overlaps the banner using negative margin-top, with a matching cutout border) -->
+                    <div id="customizer-avatar-preview" style="width: 84px; height: 84px; border-radius: 50%; border: 6px solid #11141b; background-color: #5c85ff; background-size: cover; background-position: center; margin-top: -42px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 2rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5); position: relative; z-index: 2;">?</div>
+
+                    <div style="margin-top: 10px; text-align: left;">
+                        <h4 id="customizer-name-preview" style="color: white; margin: 0; font-size: 1.3rem; font-weight: 800;">User</h4>
+                        <p id="customizer-status-preview" style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Status vibe text...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customizer Controls Dashboard -->
+            <div style="display: flex; flex-direction: column; gap: 16px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+
+                <!-- PFP Management Section -->
+                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                    <span style="font-size: 0.75rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 8px;">Profile Picture Settings</span>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <label class="btn-accent btn-small" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;">
+                            <i data-lucide="upload" style="width:14px; height:14px;"></i> Choose Image
+                            <input type="file" id="net-pfp-file-picker" accept="image/*" onchange="processImageUploadBlob(this, 'pfp')" style="display: none;">
+                        </label>
+                        <button class="btn-small" onclick="clearUploadedAsset('pfp')" style="padding: 8px 12px; background: rgba(255,255,255,0.05);">Reset PFP</button>
+                        <input type="color" id="net-theme-color-1" value="#5c85ff" title="Fallback Color" style="width: 38px; height: 34px; padding: 2px; border-radius: 6px; cursor: pointer;" oninput="previewCustomizedProfileState()">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted);">PFP Zoom (<span id="lbl-val-pfp-zoom">100</span>%)</label>
+                            <input type="range" id="crop-pfp-zoom" min="100" max="250" value="100" style="width:100%;" oninput="previewCustomizedProfileState()">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted);">PFP Vertical Position</label>
+                            <input type="range" id="crop-pfp-y" min="0" max="100" value="50" style="width:100%;" oninput="previewCustomizedProfileState()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banner Management Section -->
+                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                    <span style="font-size: 0.75rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 8px;">Profile Banner Settings</span>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <label class="btn-accent btn-small" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;">
+                            <i data-lucide="image" style="width:14px; height:14px;"></i> Choose Banner
+                            <input type="file" id="net-banner-file-picker" accept="image/*" onchange="processImageUploadBlob(this, 'banner')" style="display: none;">
+                        </label>
+                        <button class="btn-small" onclick="clearUploadedAsset('banner')" style="padding: 8px 12px; background: rgba(255,255,255,0.05);">Reset Banner</button>
+                        <input type="color" id="net-theme-color-2" value="#9d4edd" title="Fallback Color" style="width: 38px; height: 34px; padding: 2px; border-radius: 6px; cursor: pointer;" oninput="previewCustomizedProfileState()">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-muted);">Banner Vertical Alignment (<span id="lbl-val-banner-y">50</span>%)</label>
+                        <input type="range" id="crop-banner-y" min="0" max="100" value="50" style="width:100%;" oninput="previewCustomizedProfileState()">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Custom Status Message</label>
+                    <input type="text" id="net-custom-status-input" placeholder="Set a custom text status vibe..." oninput="previewCustomizedProfileState()">
+                </div>
+
+                <div class="input-group">
+                    <label>About Me (Bio)</label>
+                    <textarea id="net-about-me-input" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--card-border); color:white; padding:12px; border-radius:6px; resize:none; height:60px; font-size:0.9rem; outline:none;" placeholder="Write a short biography description..." oninput="previewCustomizedProfileState()"></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Select Specialty Badge</label>
+                    <select id="net-badge-input" onchange="previewCustomizedProfileState()" style="width:100%; background:rgba(0,0,0,0.3); color:white; padding:10px; border-radius:6px; border:1px solid var(--card-border); outline:none;">
+                        <option value="🎓 Technion Student">🎓 Technion Student</option>
+                        <option value="💻 Code Warrior">💻 Code Warrior</option>
+                        <option value="🦉 Night Owl">🦉 Night Owl</option>
+                        <option value="⚡ WebWork Slayer">⚡ WebWork Slayer</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 20px;">
+                <button class="btn-danger btn-small" onclick="deleteNetworkAccountAccount()" style="background: #FF0055; padding: 8px 12px;"><i data-lucide="trash-2"></i> Wipe Data</button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-small" onclick="document.getElementById('net-profile-customizer-modal').classList.remove('active')">Cancel</button>
+                    <button class="btn-accent" onclick="saveCustomizedProfileSettings()" style="padding: 8px 16px;">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="net-logout-confirmation-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 380px; text-align: center;">
+            <div style="display: flex; justify-content: center;"><i data-lucide="log-out" style="width: 42px; height: 42px; color: #FF0055; margin-bottom: 15px;"></i></div>
+            <h3 style="color: white; margin: 0 0 10px 0;">Account Sign Out</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px;">Are you sure you want to sign out of your current communication profile?</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-small" style="flex:1;" onclick="document.getElementById('net-logout-confirmation-modal').classList.remove('active')">Cancel</button>
+                <button class="btn-danger" style="flex:1;" onclick="commitNetworkProfileLogout()">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="net-new-dm-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 400px; text-align: center;">
+            <h2 style="color: var(--accent-color); margin-top: 0;"><i data-lucide="message-square"></i> New Message</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 20px;">Enter the exact username of the person you want to chat with.</p>
+            <div class="input-group" style="text-align: left;">
+                <label>Target Username</label>
+                <input type="text" id="net-dm-username-input" placeholder="e.g., Eden..." onkeydown="if(event.key === 'Enter') confirmNewPrivateChat()">
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn-small" onclick="document.getElementById('net-new-dm-modal').classList.remove('active')">Cancel</button>
+                <button class="btn-accent" onclick="confirmNewPrivateChat()">Start Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="net-incoming-call-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 350px; text-align: center;">
+            <div class="avatar-circle" id="incoming-call-avatar" style="width:70px; height:70px; font-size:1.8rem; margin: 0 auto 15px auto; background: var(--accent-color); box-shadow: 0 0 20px var(--accent-color);">?</div>
+            <h3 style="color: white; margin: 0 0 5px 0; font-size: 1.5rem;" id="incoming-call-name">User</h3>
+            <p style="color: #38B000; font-weight: bold; font-size: 0.9rem; margin-bottom: 25px; letter-spacing: 1px;">INCOMING P2P TRANSMISSION...</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-danger" style="flex:1;" onclick="rejectIncomingCall()"><i data-lucide="phone-off"></i> Decline</button>
+                <button class="btn-success" style="flex:1;" onclick="acceptIncomingCall()"><i data-lucide="phone"></i> Accept</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚡ V8.2 TRUE DISCORD PUBLIC PROFILE VIEWER -->
+    <div id="net-user-profile-modal" class="modal-overlay">
+        <div class="modal-content" style="width: 380px; padding: 0; overflow: hidden; border-radius: 16px; background: #11141b; border: 1px solid rgba(255,255,255,0.1); display: block;">
+
+            <!-- The Banner -->
+            <div id="profile-modal-banner" style="height: 120px; width: 100%; display: block; background-color: #9d4edd; background-size: cover; background-position: center; border-bottom: 1px solid rgba(255,255,255,0.02);"></div>
+
+            <div style="position: relative; padding: 0 16px 16px 16px; display: block;">
+                <!-- The Avatar (Overlapping) -->
+                <div id="profile-modal-avatar" style="width: 92px; height: 92px; border-radius: 50%; border: 6px solid #11141b; background-color: #5c85ff; background-size: cover; background-position: center; margin-top: -46px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 2.2rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5); position: relative; z-index: 2;">?</div>
+
+                <!-- Inner Details Box -->
+                <div style="background: #181c25; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-top: 15px; display: flex; flex-direction: column; gap: 12px; text-align: left;">
+                    <div>
+                        <h2 id="profile-modal-name" style="margin: 0; color: white; font-size: 1.4rem; font-weight: 800;">User</h2>
+                        <p id="profile-modal-status-text" style="color: #ccc; font-size: 0.88rem; margin: 4px 0 0 0; font-style: italic;">"Status"</p>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display:block; margin-bottom:4px;">About Me</span>
+                        <p id="profile-modal-bio" style="color: #eee; font-size: 0.85rem; margin: 0; line-height: 1.4; word-break: break-word;">No bio written yet.</p>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display:block; margin-bottom:4px;">Badges</span>
+                        <div id="profile-modal-badge" style="display:inline-block; font-size: 0.8rem; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; color: white; border: 1px solid rgba(255,255,255,0.1);">🎓 Student</div>
+                    </div>
+
+                    <!-- Live Focus Radar -->
+                    <div id="profile-modal-timer-radar" style="display:none; background: rgba(56, 176, 0, 0.1); border: 1px solid #38B000; padding: 10px; border-radius: 8px; align-items: center; gap: 10px;">
+                        <i data-lucide="flame" style="color:#38B000; width:20px; height:20px; animation: bounce 1s infinite alternate;"></i>
+                        <div style="text-align: left;">
+                            <div style="font-size:0.7rem; font-weight:bold; color:#38B000; text-transform:uppercase;">Live Focus Session</div>
+                            <div id="profile-modal-radar-time" style="font-size:1.1rem; font-weight:800; color:white; margin:1px 0;">25:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn-small" onclick="document.getElementById('net-user-profile-modal').classList.remove('active')" style="flex: 1; border-radius: 8px;">Close</button>
+                    <button class="btn-accent" onclick="startChatFromProfile()" style="flex: 2; border-radius: 8px;"><i data-lucide="message-square"></i> Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="command-palette-overlay" class="modal-overlay" onclick="closeCommandPalette(event)">
+        <div class="command-palette" onclick="event.stopPropagation()">
+            <div class="cmd-input-wrapper">
+                <i data-lucide="terminal" style="color: var(--accent-color);"></i>
+                <input type="text" id="cmd-input" placeholder="Search commands, navigate... (↑↓ to select, Enter to run)">
+            </div>
+            <div id="cmd-results" class="cmd-results scrollable-area">
+            </div>
+        </div>
+    </div>
+
+    <div id="onboarding-modal" class="modal-overlay" style="z-index: 9999; display: none; background: rgba(0,0,0,0.9);">
+        <div class="modal-content" style="width: 400px; background: #151922; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; text-align: center; padding: 30px;">
+            <h2 style="color: white; margin-bottom: 10px;">Welcome to TechAce</h2>
+            <p style="color: var(--text-muted); margin-bottom: 25px;">Please link your Technion account to start syncing your coursework.</p>
+
+            <div class="input-group" style="text-align: left; margin-bottom: 15px;">
+                <label style="color: white;">Technion Email</label>
+                <input type="text" id="setup-email" class="dark-picker" style="width: 100%;" placeholder="username@campus.technion.ac.il">
+            </div>
+            <div class="input-group" style="text-align: left; margin-bottom: 25px;">
+                <label style="color: white;">Password</label>
+                <input type="password" id="setup-pass" class="dark-picker" style="width: 100%;" placeholder="••••••••">
+            </div>
+
+            <button onclick="submitOnboarding()" class="btn-accent" style="width: 100%; padding: 12px; font-weight: bold;">
+                Complete Setup
+            </button>
+        </div>
+    </div>
+    <script>
+
+        // ⚡ ONBOARDING ENGINE
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Check if the user has credentials saved
+            let settings = await eel.get_settings()();
+
+            // If either email or password is empty, show the setup wizard
+            if (!settings.email || !settings.password) {
+                document.getElementById("onboarding-modal").style.display = "flex";
+                document.getElementById("onboarding-modal").classList.add("active");
+            }
+        });
+
+        async function submitOnboarding() {
+            let email = document.getElementById("setup-email").value;
+            let pass = document.getElementById("setup-pass").value;
+
+            if (!email || !pass) {
+                showToast("Please enter your Technion credentials.", "#FF0055");
+                return;
+            }
+
+            // Reuse your existing save_settings function in app.py
+            let success = await eel.save_settings({
+                "email": email,
+                "password": pass
+            })();
+
+            if (success) {
+                showToast("Credentials Saved!", "#38B000");
+                document.getElementById("onboarding-modal").style.display = "none";
+                document.getElementById("onboarding-modal").classList.remove("active");
+                location.reload(); // Refresh to sync data
+            } else {
+                showToast("Error saving credentials.", "#FF0055");
+            }
+        }
+
+        // --- LANGUAGE ENGINE ---
+        const dict = {
+            en: { title: "TechAce", timer: "FOCUS TIMER", set: "Set", deadlines: "UPCOMING DEADLINES", hw: "Homework", ww: "WebWork", exams: "Exams", done: "Completed", archive: "Archive Checked", urgent: "URGENT", upcoming: "UPCOMING", vault: "Vault Explorer", harvest: "Mass-Harvest Moodle", forge: "AI Study Forge", summary: "Generate Summary", sim: "Simulate Practice Exam", log: "Logistics Hub", search_log: "Search campus amenities...", moovit: "Moovit", rail: "Railways", settings: "System Settings", gpa: "GPA Calculator", forge_sub: "Select an active course. The AI will instantly construct a secure, timed mock examination tailored to that subject's curriculum.", forge_courses: "Autoscanned Courses", forge_duration: "Duration Limit", forge_btn: "Forge AI Test", forge_in_prog: "EXAM IN PROGRESS", forge_time: "Time Remaining", forge_cancel: "Cancel Exam", forge_turnin: "Turn In Test", forge_eval: "Examination Evaluated!", forge_eval_sub: "Your answers have been computed against the verification database.", forge_return: "Return to Dashboard", forge_difficulty: "Difficulty", diff_easy: "Easy", diff_med: "Medium", diff_hard: "Hard", diff_exp: "Expert (Exam)", forge_q_count: "Number of Questions", forge_time_3: "3 Mins (3 Qs)", forge_time_5: "5 Minutes", forge_time_10: "10 Mins (5 Qs)", forge_time_15: "15 Minutes", forge_time_20: "20 Mins (10 Qs)", forge_time_30: "30 Minutes", forge_time_45: "45 Mins (15 Qs)", forge_time_60: "60 Minutes", forge_time_120: "120 Minutes", routine_title: "AI Routine Architect", routine_sub: "Set your routine parameters and mark your days off. The AI will weave your curriculum into the remaining time.", routine_start: "Start Date", routine_end: "End Date", routine_blocks: "Daily Time Blocks", routine_add_block: "Add Block", routine_loc: "Default Location", routine_rest: "Select Rest Days (AI will mark these as SYSTEM OFFLINE)", routine_cancel: "Cancel", routine_gen: "Select Files & Generate", block_name_placeholder: "Block Name", day_sun: "Sun", day_mon: "Mon", day_tue: "Tue", day_wed: "Wed", day_thu: "Thu", day_fri: "Fri", day_sat: "Sat" },
+            he: { title: "TechAce", timer: "טיימר ריכוז", set: "הגדר", deadlines: "תאריכי יעד קרובים", hw: "שיעורי בית", ww: "וובוורק", exams: "מבחנים", done: "הושלמו", archive: "ארכיון עבודות", urgent: "דחוף", upcoming: "קרוב", vault: "סייר הכספת", harvest: "שאיבת מודל", forge: "מחולל מבחני בינה מלאכותית", summary: "צור סיכום", sim: "הדמיית מבחן", log: "מרכז לוגיסטיקה", search_log: "חפש בקמפוס...", moovit: "Moovit", rail: "רכבת ישראל", settings: "הגדרות מערכת", gpa: "מחשבון ממוצע", forge_sub: "בחר קורס פעיל. הבינה המלאכותית תרכיב באופן מיידי מבחן מדומה מאובטח וקצוב בזמן המותאם לקורס.", forge_courses: "קורסים שנסרקו", forge_duration: "מגבלת זמן", forge_btn: "חולל מבחן", forge_in_prog: "מבחן פעיל", forge_time: "זמן נותר", forge_cancel: "בטל מבחן", forge_turnin: "הגש מבחן", forge_eval: "המבחן נבדק!", forge_eval_sub: "התשובות שלך חושבו מול מאגר האימות.", forge_return: "חזור ללוח הבקרה", forge_difficulty: "רמת קושי", diff_easy: "קל", diff_med: "בינוני", diff_hard: "קשה", diff_exp: "מומחה (מבחן)", forge_q_count: "מספר שאלות", forge_time_3: "3 דק' (3 שאלות)", forge_time_5: "5 דקות", forge_time_10: "10 דק' (5 שאלות)", forge_time_15: "15 דקות", forge_time_20: "20 דק' (10 שאלות)", forge_time_30: "30 דקות", forge_time_45: "45 דק' (15 שאלות)", forge_time_60: "60 דקות", forge_time_120: "120 דקות", routine_title: "ארכיטקט שגרת חיים (AI)", routine_sub: "הגדר את פרמטרי השגרה שלך וסמן ימי חופש. הבינה המלאכותית תשזור את חומר הלימודים שלך בזמן שנותר.", routine_start: "תאריך התחלה", routine_end: "תאריך סיום", routine_blocks: "בלוקי זמן יומיים", routine_add_block: "הוסף בלוק", routine_loc: "מיקום ברירת מחדל", routine_rest: "בחר ימי מנוחה (יוגדרו כ-SYSTEM OFFLINE)", routine_cancel: "ביטול", routine_gen: "בחר קבצים וצור", block_name_placeholder: "שם הבלוק", day_sun: "א'", day_mon: "ב'", day_tue: "ג'", day_wed: "ד'", day_thu: "ה'", day_fri: "ו'", day_sat: "ש'" }
+        };
+
+        let lang = localStorage.getItem("techace_lang") || "en";
+        function toggleLang() { lang = lang === "en" ? "he" : "en"; localStorage.setItem("techace_lang", lang); applyLang(); }
+
+        // ⚡ FIX: Smart Translation Engine
+        function applyLang() {
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === "en" ? "ltr" : "rtl";
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                let key = el.getAttribute('data-i18n');
+
+                // Checks if the target is the element itself, OR a child span inside it
+                let target = el.classList.contains('t-text') ? el : el.querySelector('.t-text');
+
+                if (target && dict[lang][key]) {
+                    target.innerText = dict[lang][key];
+                }
+            });
+            document.querySelectorAll('[data-i18n-p]').forEach(el => {
+                let key = el.getAttribute('data-i18n-p');
+                if (dict[lang][key]) el.placeholder = dict[lang][key];
+            });
+        }
+
+        // --- CORE LOGIC ---
+        let currentExamPath = null; let activeStreams = {}; let campaignPaths = []; let timerInterval; let timeLeft = 25 * 60; let isRunning = false; let vaultRoot = []; let currentVaultPath = []; let examInterval; let examTimeRemaining = 3600; let campusMapInstance = null;
+        function hexToRgba(hex, alpha) { let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgba(${r}, ${g}, ${b}, ${alpha})`; }
+        function applyThemeVariables(bg, cbg, acc, font, dim, copac, wall) { const r = document.documentElement; r.style.setProperty('--bg-color', bg); r.style.setProperty('--card-bg-raw', cbg); r.style.setProperty('--card-bg', hexToRgba(cbg, copac)); r.style.setProperty('--accent-color', acc); r.style.setProperty('--font-family', font); r.style.setProperty('--bg-opacity', dim); if (wall && wall.trim() !== "") { document.getElementById('wallpaper-layer').style.backgroundImage = `url('${wall}')`; } else { document.getElementById('wallpaper-layer').style.backgroundImage = 'none'; } }
+
+        window.onload = async function () {
+            applyLang(); lucide.createIcons();
+            let settings = await eel.get_settings()(); applyThemeVariables(settings.bg_color, settings.card_bg, settings.accent_color, settings.font_family, settings.dimmer_opacity, settings.card_opacity, settings.wallpaper);
+            let data = await eel.get_initial_data()(); campaignPaths = data.full_paths;
+            let drop = document.getElementById("csv-dropdown"); drop.innerHTML = "";
+            if (data.campaigns.length === 0) { drop.innerHTML = "<option>No Schedule Linked</option>"; } else { data.campaigns.forEach((name, i) => drop.innerHTML += `<option value="${i}">${name}</option>`); loadSelectedCSV(); }
+            let savedData = await eel.get_saved_radar_data()(); populateDashboard(savedData); loadExams();
+        };
+
+        function updateTimerDisplay() { let m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); let s = (timeLeft % 60).toString().padStart(2, '0'); document.getElementById("timer-display").innerText = `${m}:${s}`; }
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+
+                    // ⚡ SYNC COUNTDOWN COMMAND TO LIVE SOCIAL NETWORK CLOUD
+                    if (networkUser && timeLeft % 5 === 0) { // Throttle updates slightly to optimize pipeline frames
+                        let timeString = document.getElementById("timer-display").innerText;
+                        db.collection("network_users").doc(networkUser.toLowerCase()).update({
+                            activeTimerString: timeString
+                        });
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    showToast("Focus session complete!", "var(--accent-color)");
+
+                    if (networkUser) {
+                        db.collection("network_users").doc(networkUser.toLowerCase()).update({ activeTimerString: "" });
+                    }
+                }
+            }, 1000);
+        }
+
+        // Clean up string fields on structural timer cancellation blocks
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            if (networkUser) { db.collection("network_users").doc(networkUser.toLowerCase()).update({ activeTimerString: "" }); }
+        }
+        function resetTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            timeLeft = 25 * 60;
+            updateTimerDisplay();
+            if (networkUser) { db.collection("network_users").doc(networkUser.toLowerCase()).update({ activeTimerString: "" }); }
+        }
+        function setCustomTimer() { let customMins = document.getElementById('custom-minutes').value; if (customMins > 0 && customMins <= 180) { timeLeft = customMins * 60; updateTimerDisplay(); pauseTimer(); } }
+        function switchMainView(viewId, btnEl) { document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active')); document.querySelectorAll('.notebook-tab').forEach(t => t.classList.remove('active')); document.getElementById('view-' + viewId).classList.add('active'); btnEl.classList.add('active'); if (viewId === 'logistics') initCampusMap(); }
+        function switchTab(e, tabId) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById(tabId).classList.add('active'); e.currentTarget.classList.add('active'); }
+        function showToast(msg, color) { let t = document.getElementById("toast"); t.innerText = msg; t.style.background = color; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3000); }
+        function searchLectures() { let input = document.getElementById("lecture-search-input").value.trim(); if (!input) return; eel.open_system_browser(`https://panopto.technion.ac.il/Panopto/Pages/Sessions/List.aspx#query=${encodeURIComponent(input)}`)(); }
+
+        async function loadExams() {
+            vaultRoot = await eel.get_local_exams()();
+            let sidebar = document.getElementById("vault-sidebar"); sidebar.innerHTML = "";
+            if (!vaultRoot || vaultRoot.length === 0) return;
+
+            vaultRoot.forEach(course => {
+                sidebar.innerHTML += `<button class="vault-course-btn" onclick="renderVaultCourse('${course.name.replace(/'/g, "\\'")}', this)"><i data-lucide="folder"></i> ${course.name}</button>`;
+                window.techaceCourses.add(course.name); // Collect from Vault too
+            });
+            updateCourseDropdown();
+            lucide.createIcons();
+        }
+        function renderVaultCourse(cName, btnEl) { document.querySelectorAll('.vault-course-btn').forEach(b => b.classList.remove('active')); if (btnEl) btnEl.classList.add('active'); let cNode = vaultRoot.find(c => c.name === cName); if (cNode) { currentVaultPath = [cNode]; renderVault(); } }
+        function renderVault() {
+            let grid = document.getElementById("vault-main-grid"); let crumbs = document.getElementById("vault-breadcrumbs"); grid.innerHTML = ""; crumbs.innerHTML = `<span style="color:var(--accent-color); cursor:pointer;" onclick="navigateVaultTo(-1)"><i data-lucide="home" style="width:16px;height:16px;"></i> Root</span>`;
+            if (currentVaultPath.length === 0) return;
+            let cNode = currentVaultPath[currentVaultPath.length - 1]; currentVaultPath.forEach((node, idx) => { crumbs.innerHTML += ` <i data-lucide="chevron-right" style="width:14px;height:14px; color:gray;"></i> <span style="color:var(--accent-color); cursor:pointer;" onclick="navigateVaultTo(${idx})">${node.name}</span>`; });
+            let items = cNode.children || []; if (items.length === 0) return;
+            items.filter(i => i.type === "folder").forEach(f => { let fData = JSON.stringify(f).replace(/'/g, "&#39;").replace(/"/g, "&quot;"); grid.innerHTML += `<div class="vault-file-card" onclick='enterVaultFolder(${fData})'><i data-lucide="folder" style="width:40px; height:40px; color:var(--accent-color);"></i><span style="font-size:0.85rem; font-weight:bold;">${f.name}</span></div>`; });
+            items.filter(i => i.type === "file").forEach(f => { let isPdf = f.ext === "pdf"; let icon = isPdf ? 'file-text' : (f.ext === 'zip' ? 'archive' : 'file'); let color = isPdf ? '#FF0055' : (f.ext === 'zip' ? '#ffcc00' : 'var(--text-main)'); grid.innerHTML += `<div class="vault-file-card" onclick="openVaultFile('${f.path.replace(/'/g, "\\'")}', '${f.name.replace(/'/g, "\\'")}', ${isPdf})"><i data-lucide="${icon}" style="width:40px; height:40px; color:${color};"></i><span style="font-size:0.85rem; word-break: break-word;">${f.name}</span></div>`; }); lucide.createIcons();
+        }
+        function enterVaultFolder(obj) { currentVaultPath.push(obj); renderVault(); } function navigateVaultTo(i) { currentVaultPath = i === -1 ? [] : currentVaultPath.slice(0, i + 1); renderVault(); }
+        function openVaultFile(p, n, pdf) { if (pdf) { document.getElementById("exam-title").innerText = n; document.getElementById("exam-frame").src = encodeURI(p).replace(/#/g, '%23'); document.getElementById("exam-modal").classList.add("active"); } else { eel.open_system_browser(p)(); } }
+        function closeExam() { document.getElementById("exam-modal").classList.remove("active"); document.getElementById("exam-frame").src = ""; } function closeExamOverlay(e) { if (e.target.id === 'exam-modal') closeExam(); }
+
+        function showHarvestWarning() { document.getElementById('harvest-warning').classList.add('active'); }
+        eel.expose(update_harvest_progress); function update_harvest_progress(m, p, e) { document.getElementById('harvest-status-text').innerText = m; document.getElementById('harvest-progress-bar').style.width = p + "%"; document.getElementById('harvest-pct-text').innerText = p + "%"; document.getElementById('harvest-eta-text').innerText = "ETA: " + e; }
+        async function triggerHarvest() { document.getElementById('harvest-warning').classList.remove('active'); document.getElementById('harvest-progress-modal').classList.add('active'); try { await eel.harvest_moodle_exams()(); document.getElementById('harvest-progress-modal').classList.remove('active'); loadExams(); showToast("Done", "#38B000"); } catch (e) { document.getElementById('harvest-progress-modal').classList.remove('active'); } }
+
+        // ⚡ V8.8 ULTIMATE BILINGUAL ROUTING & LOGISTICS DATABASE
+        const technionPOIs = [
+            // 🚂 HAIFA COASTAL RAILWAYS
+            { name: "Haifa Hof HaCarmel", nameHe: "רכבת: חוף הכרמל", type: "train", lat: 32.7935, lng: 34.9575, icon: "train" },
+            { name: "Haifa Bat Galim", nameHe: "רכבת: בת גלים", type: "train", lat: 32.8300, lng: 34.9820, icon: "train" },
+            { name: "Haifa Center HaShmona", nameHe: "רכבת: חיפה מרכז", type: "train", lat: 32.8225, lng: 34.9975, icon: "train" },
+            { name: "Merkazit HaMifratz", nameHe: "מרכזית המפרץ", type: "train", lat: 32.7933, lng: 35.0335, icon: "train" },
+
+            // 🚠 RAKAVLIT CABLE CARS
+            { name: "Rakavlit: Merkazit HaMifratz", nameHe: "רכבלית: מרכזית המפרץ", type: "cablecar", lat: 32.7930, lng: 35.0330, icon: "tram-front" },
+            { name: "Rakavlit: Technion Station", nameHe: "רכבלית: הטכניון", type: "cablecar", lat: 32.7755, lng: 35.0275, icon: "tram-front" },
+            { name: "Rakavlit: Haifa University", nameHe: "רכבלית: אוניברסיטת חיפה", type: "cablecar", lat: 32.7615, lng: 35.0190, icon: "tram-front" },
+
+            // 🚌 BUS STOPS
+            { name: "Bus Stop: Student Union", nameHe: "תחנת אוטובוס: בית הסטודנט", type: "transit", lat: 32.77625, lng: 35.02390, icon: "bus" },
+            { name: "Bus Stop: Main Gate", nameHe: "תחנת אוטובוס: שער ראשי", type: "transit", lat: 32.77770, lng: 35.01350, icon: "bus" },
+            { name: "Bus Stop: Sports Center", nameHe: "תחנת אוטובוס: מרכז הספורט", type: "transit", lat: 32.77820, lng: 35.01750, icon: "bus" },
+
+            // 🎓 ACADEMIC FACULTIES
+            { name: "Ullmann Teaching Center", nameHe: "בניין אולמן", type: "academic", lat: 32.77651, lng: 35.02275, icon: "book-open" },
+            { name: "Taub (Computer Science)", nameHe: "טאוב (מדעי המחשב)", type: "academic", lat: 32.77724, lng: 35.02112, icon: "laptop" },
+            { name: "Rabin (Civil Engineering)", nameHe: "רבין (הנדסה אזרחית)", type: "academic", lat: 32.77880, lng: 35.02230, icon: "hard-hat" },
+            { name: "Danciger (Mechanical Eng)", nameHe: "דנציגר (מכונות)", type: "academic", lat: 32.77450, lng: 35.02150, icon: "cog" },
+            { name: "Aerospace Engineering", nameHe: "הנדסת אווירונאוטיקה", type: "academic", lat: 32.77380, lng: 35.01990, icon: "rocket" },
+            { name: "Bloomfield (Industrial Eng)", nameHe: "בלומפילד (תעשייה וניהול)", type: "academic", lat: 32.77490, lng: 35.02270, icon: "briefcase" },
+            { name: "Lidow (Physics)", nameHe: "לידו (פיזיקה)", type: "academic", lat: 32.77660, lng: 35.02530, icon: "atom" },
+            { name: "Schulich (Chemistry)", nameHe: "שוליך (כימיה)", type: "academic", lat: 32.77750, lng: 35.02560, icon: "flask-conical" },
+            { name: "Biology / Life Sciences", nameHe: "ביולוגיה", type: "academic", lat: 32.77700, lng: 35.02680, icon: "leaf" },
+            { name: "Fischbach (Electrical Eng)", nameHe: "פישבך (חשמל)", type: "academic", lat: 32.77580, lng: 35.02450, icon: "cpu" },
+            { name: "Amado (Architecture)", nameHe: "אמאדו (ארכיטקטורה)", type: "academic", lat: 32.77800, lng: 35.02280, icon: "ruler" },
+            { name: "Senate Building", nameHe: "בניין הסנאט", type: "academic", lat: 32.77610, lng: 35.02180, icon: "building-2" },
+            { name: "Central Library", nameHe: "הספרייה המרכזית", type: "academic", lat: 32.77530, lng: 35.02340, icon: "library" },
+
+            // 🏠 DORMS
+            { name: "Rifkin Village", nameHe: "כפר ריפקין", type: "dorm", lat: 32.77770, lng: 35.01750, icon: "home" },
+            { name: "Eastern Village", nameHe: "כפר המשתלמים", type: "dorm", lat: 32.77400, lng: 35.02750, icon: "home" },
+            { name: "Canada Village", nameHe: "כפר קנדה", type: "dorm", lat: 32.78100, lng: 35.02050, icon: "home" },
+
+            // 🍔 FOOD & FACILITIES
+            { name: "Student Union", nameHe: "בית הסטודנט", type: "food", lat: 32.77605, lng: 35.02330, icon: "coffee" },
+            { name: "Sports Center", nameHe: "מרכז הספורט", type: "facility", lat: 32.77880, lng: 35.01630, icon: "dumbbell" }
+        ];
+
+        let wazeRoutingControl = null;
+
+        function initCampusMap() {
+            if (campusMapInstance) return;
+
+            setTimeout(() => {
+                campusMapInstance = L.map('campus-map').setView([32.7765, 35.0227], 15);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OSM' }).addTo(campusMapInstance);
+
+                technionPOIs.forEach(poi => {
+                    let markerColor = 'var(--accent-color)';
+                    if (poi.type === 'transit') markerColor = '#FF0055';
+                    else if (poi.type === 'train') markerColor = '#00E5FF';
+                    else if (poi.type === 'cablecar') markerColor = '#B200FF';
+                    else if (poi.type === 'food') markerColor = '#ffcc00';
+                    else if (poi.type === 'facility') markerColor = '#38B000';
+                    else if (poi.type === 'dorm') markerColor = '#FF8800';
+
+                    let iconHtml = `<div style="background:${markerColor}; padding:6px; border-radius:50%; border:2px solid #111; display:flex; justify-content:center; align-items:center; width:28px; height:28px; box-shadow:0 0 15px ${markerColor};"><i data-lucide="${poi.icon}" style="width:16px;height:16px;color:#111;stroke-width:2.5;"></i></div>`;
+
+                    let customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+
+                    // ⚡ FIX: Dynamic translation binding + Navigation button
+                    L.marker([poi.lat, poi.lng], { icon: customIcon })
+                        .addTo(campusMapInstance)
+                        .bindPopup(() => {
+                            let displayName = lang === "he" ? poi.nameHe : poi.name;
+                            let navBtnText = lang === "he" ? "נווט לכאן" : "Navigate Here";
+                            return `
+                                                    <div style="text-align:center; padding: 5px;">
+                                                        <b style="color: #111; font-size: 1.1rem; display: block; margin-bottom: 8px;">${displayName}</b>
+                                                        <button onclick="triggerWazeRouting(${poi.lat}, ${poi.lng})" style="background: var(--accent-color); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;">
+                                                            🧭 ${navBtnText}
+                                                        </button>
+                                                    </div>
+                                                `;
+                        });
+                });
+
+                lucide.createIcons();
+            }, 300);
+        }
+
+        // ⚡ NEW: The "Waze" Navigation Logic
+        function triggerWazeRouting(destLat, destLng) {
+            if (!navigator.geolocation) {
+                showToast("Geolocation is not supported by your browser", "#FF0055");
+                return;
+            }
+
+            showToast(lang === "he" ? "מאתר את מיקומך..." : "Locating your GPS...", "var(--accent-color)");
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                let userLat = position.coords.latitude;
+                let userLng = position.coords.longitude;
+
+                if (wazeRoutingControl) {
+                    campusMapInstance.removeControl(wazeRoutingControl);
+                }
+
+                // Draw the route using OSRM!
+                wazeRoutingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(userLat, userLng),
+                        L.latLng(destLat, destLng)
+                    ],
+                    routeWhileDragging: false,
+                    addWaypoints: false,
+                    fitSelectedRoutes: true,
+                    show: false, // Hide the text directions box to keep UI clean
+                    lineOptions: {
+                        styles: [{ color: '#00E5FF', opacity: 0.8, weight: 6 }]
+                    },
+                    createMarker: function () { return null; } // Prevent duplicate markers
+                }).addTo(campusMapInstance);
+
+                showToast(lang === "he" ? "מסלול חושב!" : "Route Calculated!", "#38B000");
+
+            }, (error) => {
+                // Fallback: If user denies GPS, draw a route from the Technion Main Gate
+                showToast(lang === "he" ? "מיקום נדחה. מנווט משער ראשי." : "Location denied. Routing from Main Gate.", "#ffcc00");
+                if (wazeRoutingControl) campusMapInstance.removeControl(wazeRoutingControl);
+                wazeRoutingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(32.7777, 35.0135), // Main Gate
+                        L.latLng(destLat, destLng)
+                    ],
+                    show: false,
+                    lineOptions: { styles: [{ color: '#00E5FF', opacity: 0.8, weight: 6 }] }
+                }).addTo(campusMapInstance);
+            });
+        }
+        async function executeCampusSearch() {
+            let q = document.getElementById("logistics-search-bar").value.trim(); if (!q) return;
+            let resBox = document.getElementById("logistics-results"); resBox.innerHTML = `<div style="text-align:center;"><i data-lucide="loader" class="spin"></i></div>`; lucide.createIcons();
+            let data = await eel.search_campus_logistics(q)(); if (!data.error) { resBox.innerHTML = marked.parse(data.markdown); if (q.toLowerCase().includes("ullmann")) campusMapInstance.setView([32.7763, 35.0243], 18); }
+        }
+
+        function openChromelessWindow(url) { window.open(url, 'TechAce', `toolbar=no, width=1200, height=800, top=${(screen.height / 2) - 400}, left=${(screen.width / 2) - 600}`); }
+        async function openTaskLink(url) { let s = await eel.get_settings()(); if (s.browser_mode === "in_app") { openChromelessWindow(url); } else { eel.open_system_browser(url)(); } }
+        async function triggerSync() {
+            try {
+                let btn = document.getElementById("sync-btn");
+                if (btn) { btn.innerHTML = `<i data-lucide="loader" class="spin"></i>`; lucide.createIcons(); btn.style.pointerEvents = "none"; }
+                let data = await eel.sync_threat_radar()();
+                populateDashboard(data);
+                showToast("Sync Complete", "#38B000");
+                if (btn) { btn.innerHTML = `<i data-lucide="refresh-cw"></i>`; lucide.createIcons(); btn.style.pointerEvents = "auto"; }
+            } catch (e) {
+                showToast("Sync Failed", "#FF0055");
+                let btn = document.getElementById("sync-btn");
+                if (btn) { btn.innerHTML = `<i data-lucide="refresh-cw"></i>`; lucide.createIcons(); btn.style.pointerEvents = "auto"; }
+            }
+        }
+
+        // ⚡ V8.15 2FA INVISIBLE INTERCEPTOR HANDLERS
+        eel.expose(show_2fa_modal);
+        function show_2fa_modal(authNumber) {
+            document.getElementById("auth-2fa-number").innerText = authNumber;
+            document.getElementById("auth-2fa-modal").classList.add("active");
+            lucide.createIcons();
+        }
+
+        eel.expose(hide_2fa_modal);
+        function hide_2fa_modal() {
+            document.getElementById("auth-2fa-modal").classList.remove("active");
+            showToast("Authentication Approved!", "#38B000");
+        }
+
+        // ⚡ V8.14 AGGRESSIVE COURSE DEDUPLICATION PIPELINE
+        let globalForgeCourseList = [];
+
+        function registerForgeCourse(courseStr) {
+            let c = (courseStr || "").trim();
+            if (!c || c === "General" || c.toLowerCase().includes("loading")) return;
+
+            // 1. Strip out semester tags
+            c = c.replace(/\s*-\s*(אביב|חורף|קיץ|תשפ|semester|spring|winter).*$/i, '').trim();
+
+            // 2. Strip trailing quotes (Fixes the Moodle "1מ'" vs Vault "1מ" issue)
+            c = c.replace(/['"׳]/g, '').trim();
+
+            // 3. Normalization Engine: Removes all spaces, dots, and dashes just for comparison.
+            // This forces "מבוא להנ.חומרים" and "מבוא להנחומרים" to mathmatically equal "מבואלהנחומרים".
+            let normalizedC = c.replace(/[\s\.\-\\_]/g, '');
+
+            let isDuplicate = globalForgeCourseList.some(existing => {
+                let normalizedExisting = existing.replace(/[\s\.\-\\_]/g, '');
+                return normalizedC === normalizedExisting;
+            });
+
+            if (!isDuplicate) {
+                globalForgeCourseList.push(c);
+            }
+        }
+
+        function updateCourseDropdown() {
+            let select = document.getElementById('forge-topic-select');
+            if (!select) return;
+            select.innerHTML = '';
+            if (globalForgeCourseList.length === 0) {
+                select.innerHTML = '<option value="">No courses detected...</option>';
+                return;
+            }
+            globalForgeCourseList.sort().forEach(c => {
+                select.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        }
+
+        function populateDashboard(data) {
+            if (!data) return;
+
+            // ⚡ FIX: Wipe the array clean before repopulating so manual syncs don't stack duplicates
+            globalForgeCourseList = [];
+
+            // Clean scan through all sources and register them without duplicates
+            data.moodle.forEach(m => registerForgeCourse(m.course));
+            data.webwork.forEach(w => registerForgeCourse(w.course));
+            data.exams.forEach(e => registerForgeCourse(e.course));
+            updateCourseDropdown();
+
+            // ... (keep your existing buildTask code inside here exactly as it was)
+            const buildTask = (item) => {
+                let title = String(item.name || item.task || "Task");
+                let course = String(item.course || "");
+                let u = item.is_urgent ? "urgent-item" : "";
+                let safeTitle = title.replace(/'/g, "\\'"); let safeValue = title.replace(/"/g, '&quot;'); let safeTaskUrl = String(item.link || "").replace(/'/g, "\\'"); let safeCourseUrl = String(item.course_url || "[https://moodle25.technion.ac.il/my/](https://moodle25.technion.ac.il/my/)").replace(/'/g, "\\'");
+                let courseHtml = course ? `<span class="course-pill" onclick="openTaskLink('${safeCourseUrl}'); event.preventDefault(); event.stopPropagation();" onmouseover="this.style.background='var(--accent-color)'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='var(--accent-color)';" style="cursor: pointer; transition: 0.2s; flex-shrink: 0;" title="Open Course Page">${course}</span>` : "";
+                return `<li class="${u}">
+                                                <div class="checkbox-container" style="cursor: default; display: flex; align-items: center; gap: 12px; flex: 1; width: 100%;">
+                                                    <input type="checkbox" value="${safeValue}" style="cursor: pointer; flex-shrink: 0;">
+                                                    <div class="task-info" style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 15px;">
+                                                        <span class="clickable-task-title" onclick="openTaskLink('${safeTaskUrl}'); event.preventDefault(); event.stopPropagation();" style="cursor: pointer; flex: 1; text-align: start;" title="Open Assignment">${title}</span>
+                                                        ${courseHtml}
+                                                    </div>
+                                                </div>
+                                                <div style="display:flex; align-items:center; gap: 10px; margin-left: 15px; flex-shrink: 0;">
+                                                    <button class="quiz-btn" onclick="triggerQuiz('${safeTitle}')"><i data-lucide="brain"></i></button>
+                                                    <div class="task-meta">${item.date}</div>
+                                                </div>
+                                            </li>`;
+            };
+
+            try {
+                document.getElementById("moodle-list-urgent").innerHTML = data.moodle.filter(m => m.is_urgent).map(m => buildTask(m)).join("") || "<p>None.</p>";
+                document.getElementById("moodle-list-upcoming").innerHTML = data.moodle.filter(m => !m.is_urgent).map(m => buildTask(m)).join("") || "<p>None.</p>";
+                document.getElementById("ww-list-urgent").innerHTML = data.webwork.filter(w => w.is_urgent).map(w => buildTask(w)).join("") || "<p>None.</p>";
+                document.getElementById("ww-list-upcoming").innerHTML = data.webwork.filter(w => !w.is_urgent).map(w => buildTask(w)).join("") || "<p>None.</p>";
+                document.getElementById("exam-list").innerHTML = data.exams.map(e => {
+                    let dateParts = String(e.date).split(" "); let month = dateParts[0] || "TBA"; let day = dateParts[1] || "--"; let safeTask = String(e.task).replace(/'/g, "\\'").replace(/"/g, '&quot;'); let courseTag = e.course ? `<div class="exam-course">${e.course}</div>` : "";
+                    return `<div class="exam-card"><div class="exam-date-box"><div class="exam-month">${month}</div><div class="exam-day">${day}</div></div><div class="exam-info"><div class="exam-title" title="${safeTask}">${e.task}</div>${courseTag}</div></div>`;
+                }).join("");
+                lucide.createIcons();
+            } catch (err) { }
+        }
+
+        async function loadExams() {
+            vaultRoot = await eel.get_local_exams()();
+            let sidebar = document.getElementById("vault-sidebar"); sidebar.innerHTML = "";
+            if (!vaultRoot || vaultRoot.length === 0) return;
+
+            vaultRoot.forEach(course => {
+                sidebar.innerHTML += `<button class="vault-course-btn" onclick="renderVaultCourse('${course.name.replace(/'/g, "\\'")}', this)"><i data-lucide="folder"></i> ${course.name}</button>`;
+                registerForgeCourse(course.name);
+            });
+            updateCourseDropdown();
+            lucide.createIcons();
+        }
+
+        eel.expose(updateChatStream);
+        function updateChatStream(msgId, textChunk, isFinal) {
+            try {
+                if (msgId === "studio-out") {
+                    let outBox = document.getElementById("studio-output");
+                    if (!activeStreams[msgId]) { outBox.innerHTML = "<div id='studio-content' style='padding-bottom: 20px;'></div>"; activeStreams[msgId] = ""; }
+                    if (!isFinal) { activeStreams[msgId] += (textChunk || ""); document.getElementById("studio-content").innerHTML = activeStreams[msgId].replace(/\n/g, '<br>') + '<span class="cursor-blink">▍</span>'; }
+                    else { activeStreams[msgId] += (textChunk || ""); let contentEl = document.getElementById("studio-content"); contentEl.innerHTML = marked.parse(activeStreams[msgId]); if (window.renderMathInElement) { renderMathInElement(contentEl, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }, { left: '\\[', right: '\\]', display: true }], throwOnError: false }); } lucide.createIcons(); delete activeStreams[msgId]; }
+                    return;
+                }
+
+                let h = document.getElementById("chat-history"); let msgBubble = document.getElementById(msgId);
+                if (!msgBubble) { let t = document.getElementById(msgId + "-typing"); if (t) t.remove(); let newMsg = document.createElement("div"); newMsg.id = msgId; newMsg.className = "chat-msg msg-ai"; if (h) h.appendChild(newMsg); msgBubble = newMsg; activeStreams[msgId] = ""; }
+
+                if (!isFinal) { activeStreams[msgId] += (textChunk || ""); msgBubble.innerHTML = activeStreams[msgId].replace(/\n/g, '<br>') + '<span class="cursor-blink">▍</span>'; }
+                else { activeStreams[msgId] += (textChunk || ""); msgBubble.innerHTML = marked.parse(activeStreams[msgId]); if (window.renderMathInElement) { renderMathInElement(msgBubble, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }, { left: '\\[', right: '\\]', display: true }], throwOnError: false }); } lucide.createIcons(); delete activeStreams[msgId]; }
+                if (h) h.scrollTop = h.scrollHeight;
+            } catch (e) { }
+        }
+
+        async function importCSV() { let res = await eel.trigger_import_csv()(); if (res.success) location.reload(); }
+
+
+        // ⚡ V8.13 MULTI-PHASE ROUTINE CONTROLLER
+        let phaseCount = 1;
+
+        function addSchedulePhase() {
+            phaseCount++;
+            let container = document.getElementById("ai-sched-phases-container");
+            let div = document.createElement("div");
+            div.className = "phase-card";
+            div.style.cssText = "background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; animation: fadeIn 0.3s ease;";
+
+            div.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h3 style="color:var(--accent-color); margin:0; font-size: 1.1rem;">Phase ${phaseCount}</h3>
+                                <button class="btn-danger btn-small" onclick="if(document.querySelectorAll('.phase-card').length > 1) this.closest('.phase-card').remove(); else showToast('Need at least 1 phase!', '#FF0055');"><i data-lucide="trash-2"></i></button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="input-group" style="margin:0;"><label class="t-text" data-i18n="routine_start">${dict[lang].routine_start || "Start Date"}</label><input type="date" class="dark-picker phase-start" style="width:100%;"></div>
+                                <div class="input-group" style="margin:0;"><label class="t-text" data-i18n="routine_end">${dict[lang].routine_end || "End Date"}</label><input type="date" class="dark-picker phase-end" style="width:100%;"></div>
+                                <div class="input-group" style="grid-column: span 2; margin:0;"><label class="t-text" data-i18n="routine_loc">${dict[lang].routine_loc || "Location"}</label><input type="text" class="dark-picker phase-loc" value="New Location" style="width:100%;"></div>
+                            </div>
+                            <div class="input-group" style="margin:0;">
+                                <label style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span class="t-text" data-i18n="routine_blocks">${dict[lang].routine_blocks || "Time Blocks"}</span>
+                                    <button class="btn-small" onclick="addScheduleBlock(this)" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="plus" style="width:12px;height:12px;"></i> <span class="t-text" data-i18n="routine_add_block">${dict[lang].routine_add_block || "Add Block"}</span></button>
+                                </label>
+                                <div class="blocks-container" style="display:flex; flex-direction:column; gap:10px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <div class="block-row" style="display:grid; grid-template-columns: auto auto 1fr auto; gap:10px; align-items:center;">
+                                        <input type="time" class="dark-picker start-time" value="09:00" style="padding: 8px !important; width: 110px;">
+                                        <input type="time" class="dark-picker end-time" value="12:00" style="padding: 8px !important; width: 110px;">
+                                        <input type="text" class="dark-picker block-name" data-i18n-p="block_name_placeholder" placeholder="${dict[lang].block_name_placeholder || 'Block Name'}" style="padding: 8px !important; width: 100%;">
+                                        <button class="btn-danger" onclick="if(this.closest('.blocks-container').querySelectorAll('.block-row').length>1) this.parentElement.remove();" style="padding: 8px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            container.appendChild(div);
+            lucide.createIcons();
+            applyLang(); // Re-apply translations for the new dynamically generated phase
+        }
+
+        async function checkForUpdatesOnLoad() {
+            let update = await eel.check_for_updates()();
+            if (update.available) {
+                // Show a UI component
+                document.getElementById("update-banner").style.display = "block";
+                window.latestUrl = update.url;
+            }
+        }
+
+        function runUpdate() {
+            showToast("Downloading update... App will restart automatically.", "#9D4EDD");
+            eel.apply_update(window.latestUrl)();
+        }
+
+        function addScheduleBlock(btnElement) {
+            let container = btnElement.closest('.input-group').querySelector(".blocks-container");
+            let div = document.createElement("div");
+            div.className = "block-row";
+            div.style.cssText = "display:grid; grid-template-columns: auto auto 1fr auto; gap:10px; align-items:center; animation: fadeIn 0.2s ease;";
+            div.innerHTML = `
+                            <input type="time" class="dark-picker start-time" value="14:00" style="padding: 8px !important; width: 110px;">
+                            <input type="time" class="dark-picker end-time" value="16:00" style="padding: 8px !important; width: 110px;">
+                            <input type="text" class="dark-picker block-name" data-i18n-p="block_name_placeholder" placeholder="${dict[lang].block_name_placeholder || 'Block Name'}" style="padding: 8px !important; width: 100%;">
+                            <button class="btn-danger" onclick="if(this.closest('.blocks-container').querySelectorAll('.block-row').length>1) this.parentElement.remove();" style="padding: 8px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+                        `;
+            container.appendChild(div);
+            lucide.createIcons();
+            applyLang();
+        }
+
+        async function triggerAIScheduleForge() {
+            let activeModal = document.querySelector('#ai-schedule-modal.active') || document;
+
+            // ⚡ EXTRACTION: Read EVERY Phase Card recursively
+            let phasesPayload = [];
+            let isValid = true;
+
+            activeModal.querySelectorAll(".phase-card").forEach((pCard, index) => {
+                let startD = pCard.querySelector(".phase-start").value;
+                let endD = pCard.querySelector(".phase-end").value;
+                let loc = pCard.querySelector(".phase-loc").value || "TBD";
+
+                if (!startD || !endD) isValid = false;
+
+                let blocks = [];
+                pCard.querySelectorAll(".block-row").forEach(row => {
+                    blocks.push({
+                        start: row.querySelector(".start-time").value,
+                        end: row.querySelector(".end-time").value,
+                        name: row.querySelector(".block-name").value || "Study Block"
+                    });
+                });
+
+                phasesPayload.push({ phase_id: index + 1, start_date: startD, end_date: endD, location: loc, blocks: blocks });
+            });
+
+            if (!isValid) { showToast("Please ensure ALL phases have a Start and End date.", "#FF0055"); return; }
+            if (phasesPayload.length === 0) return;
+
+            let daysOffNodes = activeModal.querySelectorAll("#ai-sched-days-off .day-toggle.active");
+            let daysOff = Array.from(daysOffNodes).map(n => n.getAttribute("data-day"));
+
+            let btn = activeModal.querySelector("#btn-forge-routine");
+            if (btn) { btn.innerHTML = `<i data-lucide="loader" class="spin"></i> Forging Timeline...`; btn.style.pointerEvents = "none"; }
+            lucide.createIcons();
+
+            // Send the massive nested payload to Python
+            let res = await eel.forge_schedule_from_syllabi(phasesPayload, daysOff)();
+
+            if (btn) { btn.innerHTML = `<i data-lucide="sparkles"></i> Select Files & Generate`; btn.style.pointerEvents = "auto"; }
+            lucide.createIcons();
+
+            if (res.success) {
+                showToast("AI Master Timeline Forged!", "#38B000");
+                document.getElementById('ai-schedule-modal').classList.remove('active');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(res.error || "Generation Failed.", "#FF0055");
+            }
+        }
+
+        // ⚡ NEW: Beautiful Native Date Formatter
+        function formatFriendlyDate(dStr) {
+            try {
+                // Slashes prevent the browser from accidentally timezone-shifting the day
+                let d = new Date(dStr.replace(/-/g, '\/'));
+                if (isNaN(d)) return dStr;
+                // Formats it natively based on EN or HE translation state!
+                return d.toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-US', { month: 'long', day: 'numeric' });
+            } catch (e) { return dStr; }
+        }
+
+        async function loadSelectedCSV() {
+            let idx = document.getElementById("csv-dropdown").value;
+            if (!campaignPaths[idx]) return;
+            let res = await eel.load_csv_file(campaignPaths[idx])();
+            let dDrop = document.getElementById("date-dropdown");
+            dDrop.innerHTML = "";
+            if (res.success) {
+                res.dates.forEach(d => {
+                    // Inject the beautifully formatted date into the dropdown UI
+                    dDrop.innerHTML += `<option value="${d}">${formatFriendlyDate(d)}</option>`;
+                });
+                updateDailyBlocks();
+            }
+        }
+        async function updateDailyBlocks() { let d = document.getElementById("date-dropdown").value; let res = await eel.get_dashboard_for_date(d)(); document.getElementById("location-text").innerHTML = `<i data-lucide="map-pin"></i> ${res.location}`; document.getElementById("blocks-container").innerHTML = res.blocks.map(b => `<div class="task-block"><h3>${b.name}</h3><label class="checkbox-container"><input type="checkbox"> ${b.target}</label></div>`).join(""); lucide.createIcons(); }
+
+        function openGPAModal() { document.getElementById('gpa-modal').classList.add('active'); } function closeGPAModal() { document.getElementById('gpa-modal').classList.remove('active'); } function closeGPAOverlay(e) { if (e.target.id === 'gpa-modal') closeGPAModal(); }
+        async function importGradesCSV() { let res = await eel.trigger_import_grades_csv()(); if (res.success) { document.getElementById('gpa-display').innerText = res.gpa.toFixed(2); document.getElementById('credits-display').innerText = res.total_credits.toFixed(1); document.getElementById('gpa-course-list').innerHTML = res.courses.map(c => `<tr><td>${c.name}</td><td>${c.grade}</td><td>${c.credits}</td></tr>`).join(""); } }
+
+        function toggleChat() { document.getElementById("chat-overlay").classList.toggle("active"); } function closeChatOverlay(e) { if (e.target.id === 'chat-overlay') document.getElementById("chat-overlay").classList.remove("active"); } function triggerQuiz(t) { toggleChat(); document.getElementById("chat-input").value = `Pop quiz on "${t}"`; sendChatMessage(); } function handleChatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }
+        function sendChatMessage() {
+            let i = document.getElementById("chat-input"); let m = i.value.trim(); if (!m) return;
+            let h = document.getElementById("chat-history"); h.innerHTML += `<div class="chat-msg msg-user">${m}</div>`; i.value = ""; h.scrollTop = h.scrollHeight;
+            let id = "ai-" + Date.now(); h.innerHTML += `<div id="${id}-typing" class="chat-msg msg-ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`; h.scrollTop = h.scrollHeight;
+            eel.ask_techace_tutor(m, null, id)();
+        }
+        function sendClipboardToAI() {
+            let i = document.getElementById("chat-input"); let id = "ai-" + Date.now(); let h = document.getElementById("chat-history");
+            h.innerHTML += `<div class="chat-msg msg-user">📸 [Image Snippet Sent]</div>`; h.innerHTML += `<div id="${id}-typing" class="chat-msg msg-ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`; h.scrollTop = h.scrollHeight;
+            eel.solve_from_clipboard(i.value, id)(); i.value = "";
+        }
+
+        // ⚡ V8.6 REAL DYNAMIC AI STUDY FORGE ENGINE
+        let forgeActiveExamData = null;
+        let forgeCountdownTicker = null;
+        let forgeSecondsLeft = 0;
+
+        async function generateSecureForgeTest() {
+            const topic = document.getElementById('forge-topic-select').value;
+            const difficulty = document.getElementById('forge-difficulty-select').value;
+            const numQs = parseInt(document.getElementById('forge-q-count').value, 10);
+            const limit = parseInt(document.getElementById('forge-time-select').value, 10);
+
+            if (!topic) {
+                showToast("Please select a course first!", "#FF0055");
+                return;
+            }
+
+            // Note: Generating 15-20 heavy LaTeX questions can take Gemini 30+ seconds!
+            let btn = document.getElementById("forge-generate-btn");
+            btn.innerHTML = `<i data-lucide="loader" class="spin"></i> Forging AI Test (May take a moment)...`;
+            btn.style.pointerEvents = "none";
+            lucide.createIcons();
+
+            // ⚡ REQUEST RAW JSON FROM PYTHON AI
+            let aiResponse = await eel.generate_mock_exam_json(topic, lang, difficulty, numQs)();
+
+            btn.innerHTML = `<i data-lucide="sparkles"></i> <span class="t-text" data-i18n="forge_btn">${dict[lang].forge_btn}</span>`;
+            btn.style.pointerEvents = "auto";
+            lucide.createIcons();
+
+            if (aiResponse.error || !Array.isArray(aiResponse)) {
+                showToast(aiResponse.error || "AI timed out. Try generating fewer questions!", "#FF0055");
+                return;
+            }
+
+            forgeActiveExamData = aiResponse;
+            forgeSecondsLeft = limit;
+
+            if (forgeCountdownTicker) clearInterval(forgeCountdownTicker);
+
+            document.getElementById('forge-grading-panel').style.display = 'none';
+            const env = document.getElementById('forge-exam-environment');
+            env.style.display = 'block';
+            document.getElementById('forge-current-title').innerText = topic;
+
+            const form = document.getElementById('forge-quiz-form');
+            form.innerHTML = '';
+
+            forgeActiveExamData.forEach((item, qIdx) => {
+                let optionsHtml = '';
+                item.options.forEach((opt, oIdx) => {
+                    optionsHtml += `
+                                            <label style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04); cursor: pointer; color: #eee; font-size: 0.95rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.3)';" onmouseout="this.style.background='rgba(0,0,0,0.15)';">
+                                                <input type="radio" name="forge-q-${qIdx}" value="${oIdx}" style="accent-color: var(--accent-color); width: 16px; height: 16px; flex-shrink:0;">
+                                                <span>${opt}</span>
+                                            </label>
+                                        `;
+                });
+
+                form.innerHTML += `
+                                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                                            <p style="color: white; margin: 0 0 15px 0; font-weight: 600; font-size: 1.1rem; line-height: 1.5;"><span style="color: var(--accent-color); font-weight:800;">Q${qIdx + 1}:</span> ${item.q}</p>
+                                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                                ${optionsHtml}
+                                            </div>
+                                        </div>
+                                    `;
+            });
+
+            if (window.renderMathInElement) {
+                renderMathInElement(form, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\(', right: '\\)', display: false },
+                        { left: '\\[', right: '\\]', display: true }
+                    ],
+                    throwOnError: false
+                });
+            }
+
+            updateForgeClockDisplay();
+            forgeCountdownTicker = setInterval(() => {
+                forgeSecondsLeft--;
+                updateForgeClockDisplay();
+                if (forgeSecondsLeft <= 0) {
+                    clearInterval(forgeCountdownTicker);
+                    turnInForgeExam();
+                }
+            }, 1000);
+
+            broadcastActivityStatus(`📝 Taking Exam: ${topic}`);
+        }
+
+        function updateForgeClockDisplay() {
+            const mins = Math.floor(forgeSecondsLeft / 60).toString().padStart(2, '0');
+            const secs = (forgeSecondsLeft % 60).toString().padStart(2, '0');
+            document.getElementById('forge-countdown-clock').innerText = `${mins}:${secs}`;
+        }
+
+        function turnInForgeExam() {
+            if (forgeCountdownTicker) clearInterval(forgeCountdownTicker);
+            if (!forgeActiveExamData) return;
+
+            let structuralTotal = forgeActiveExamData.length;
+            let totalCorrectAnswers = 0;
+
+            forgeActiveExamData.forEach((item, qIdx) => {
+                const checkedRadio = document.querySelector(`input[name="forge-q-${qIdx}"]:checked`);
+                if (checkedRadio && parseInt(checkedRadio.value, 10) === item.answer) {
+                    totalCorrectAnswers++;
+                }
+            });
+
+            const percentage = Math.round((totalCorrectAnswers / structuralTotal) * 100);
+
+            document.getElementById('forge-exam-environment').style.display = 'none';
+            const gradePanel = document.getElementById('forge-grading-panel');
+            gradePanel.style.display = 'block';
+
+            document.getElementById('forge-final-score').innerText = `${totalCorrectAnswers} / ${structuralTotal}`;
+
+            let color = percentage >= 80 ? "#38B000" : (percentage >= 50 ? "#ffcc00" : "#FF0055");
+            document.getElementById('forge-final-score').style.color = color;
+            document.getElementById('forge-score-percentage').innerText = `(${percentage}%)`;
+
+            broadcastActivityStatus(localStorage.getItem("techace_net_status") || "Online");
+        }
+
+        function abandonForgeExam() {
+            if (forgeCountdownTicker) clearInterval(forgeCountdownTicker);
+            document.getElementById('forge-exam-environment').style.display = 'none';
+            broadcastActivityStatus(localStorage.getItem("techace_net_status") || "Online");
+        }
+
+        function dismissForgeGrading() {
+            document.getElementById('forge-grading-panel').style.display = 'none';
+        }
+
+        function broadcastActivityStatus(statusMessage) {
+            if (networkUser) {
+                db.collection("network_users").doc(networkUser.toLowerCase()).update({
+                    statusText: statusMessage
+                });
+            }
+        }
+
+        async function openSettings() {
+            let s = await eel.get_settings()();
+            document.getElementById("moodle-input").value = s.moodle_url || ""; document.getElementById("cheesefork-input").value = s.cheesefork_url || ""; document.getElementById("email-input").value = s.email || ""; document.getElementById("password-input").value = s.password || ""; document.getElementById("gemini-input").value = s.gemini_api_key || ""; document.getElementById("transit-input").value = s.transit_key || ""; document.getElementById("wallpaper-input").value = s.wallpaper || ""; document.getElementById("bg-color-input").value = s.bg_color || "#000000"; document.getElementById("card-bg-input").value = s.card_bg || "#070c1a"; document.getElementById("accent-color-input").value = s.accent_color || "#5c85ff"; document.getElementById("font-input").value = s.font_family || "'Inter', sans-serif"; document.getElementById("dimmer-input").value = s.dimmer_opacity || 0.3; document.getElementById("card-opacity-input").value = s.card_opacity || 0.85; document.getElementById("browser-mode-input").value = s.browser_mode || "in_app"; document.getElementById("settings-modal").classList.add("active");
+        }
+
+        function previewTheme() { applyThemeVariables(document.getElementById("bg-color-input").value, document.getElementById("card-bg-input").value, document.getElementById("accent-color-input").value, document.getElementById("font-input").value, document.getElementById("dimmer-input").value, document.getElementById("card-opacity-input").value, document.getElementById("wallpaper-input").value); }
+        async function browseWallpaper() { let p = await eel.pick_wallpaper()(); if (p) { document.getElementById("wallpaper-input").value = p; previewTheme(); } }
+        function closeSettings() { document.getElementById("settings-modal").classList.remove("active"); }
+        function resetAppearance() { document.getElementById("bg-color-input").value = "#000000"; document.getElementById("card-bg-input").value = "#070c1a"; document.getElementById("accent-color-input").value = "#5c85ff"; document.getElementById("font-input").value = "'Inter', sans-serif"; document.getElementById("dimmer-input").value = "0.3"; document.getElementById("card-opacity-input").value = "0.85"; document.getElementById("wallpaper-input").value = "wallpapers/default_bg.png"; previewTheme(); }
+
+        async function saveSettings() {
+            const configData = { moodle_url: document.getElementById("moodle-input").value, cheesefork_url: document.getElementById("cheesefork-input").value, email: document.getElementById("email-input").value, password: document.getElementById("password-input").value, gemini_api_key: document.getElementById("gemini-input").value, transit_key: document.getElementById("transit-input").value, wallpaper: document.getElementById("wallpaper-input").value, bg_color: document.getElementById("bg-color-input").value, card_bg: document.getElementById("card-bg-input").value, accent_color: document.getElementById("accent-color-input").value, font_family: document.getElementById("font-input").value, dimmer_opacity: parseFloat(document.getElementById("dimmer-input").value), card_opacity: parseFloat(document.getElementById("card-opacity-input").value), browser_mode: document.getElementById("browser-mode-input").value };
+            await eel.save_settings(configData)(); closeSettings(); showToast("Saved Successfully", "var(--accent-color)"); location.reload();
+        }
+
+        // --- COMMAND PALETTE ENGINE ---
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'F11') { event.preventDefault(); if (document.fullscreenElement) { document.exitFullscreen().then(() => { setTimeout(() => { window.resizeTo(1200, 750); window.moveTo((window.screen.availWidth - 1200) / 2, (window.screen.availHeight - 750) / 2); }, 150); }); } else { document.documentElement.requestFullscreen(); } }
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') { event.preventDefault(); openCommandPalette(); }
+            let pal = document.getElementById("command-palette-overlay");
+            if (pal && pal.classList.contains("active")) {
+                if (event.key === 'Escape') closeCommandPalette(event);
+                if (event.key === 'ArrowDown') { event.preventDefault(); navigateCmd(1); }
+                if (event.key === 'ArrowUp') { event.preventDefault(); navigateCmd(-1); }
+                if (event.key === 'Enter') { event.preventDefault(); executeSelectedCmd(); }
+            }
+        });
+
+        let cmdSelectedIndex = 0; let currentFilteredCommands = [];
+        const appCommands = [
+            { title: "Navigate: Dashboard", icon: "layout-dashboard", action: () => switchMainView('dashboard', document.querySelectorAll('.notebook-tab')[0]) },
+            { title: "Navigate: Vault Explorer", icon: "folder-open", action: () => switchMainView('vault', document.querySelectorAll('.notebook-tab')[1]) },
+            { title: "Navigate: AI Study Forge", icon: "sparkles", action: () => switchMainView('studio', document.querySelectorAll('.notebook-tab')[3]) },
+            { title: "Navigate: Logistics Hub", icon: "map", action: () => switchMainView('logistics', document.querySelectorAll('.notebook-tab')[4]) },
+            { title: "Navigate: Study Network", icon: "users", action: () => switchMainView('network', document.querySelectorAll('.notebook-tab')[5]) },
+            { title: "Action: Sync Moodle & WebWork", icon: "refresh-cw", action: triggerSync },
+            { title: "Action: Open System Settings", icon: "settings", action: openSettings },
+            { title: "Action: Open GPA Calculator", icon: "calculator", action: openGPAModal },
+            { title: "Timer: Start", icon: "play", action: startTimer },
+            { title: "Timer: Pause", icon: "pause", action: pauseTimer },
+            { title: "Timer: Reset", icon: "rotate-ccw", action: resetTimer },
+            { title: "App: Toggle Language (EN/HE)", icon: "globe", action: () => { toggleLang(); location.reload(); } },
+            { title: "Link: Open Moodle", icon: "external-link", action: () => openChromelessWindow('https://moodle25.technion.ac.il/my/') },
+            { title: "Action: Mass-Harvest Moodle", icon: "download-cloud", action: showHarvestWarning },
+            { title: "Link: Moovit", icon: "bus", action: () => openChromelessWindow('https://moovitapp.com/israel/he/public_transport-lines-haifa-1721') },
+            { title: "Link: Israel Railways", icon: "train", action: () => openChromelessWindow('https://www.rail.co.il/') }
+        ];
+
+        function openCommandPalette() { document.getElementById("command-palette-overlay").classList.add("active"); let input = document.getElementById("cmd-input"); input.value = ""; input.focus(); renderCommands(""); }
+        function closeCommandPalette(e) { if (!e || e.target.id === 'command-palette-overlay' || e.key === 'Escape') { document.getElementById("command-palette-overlay").classList.remove("active"); } }
+        document.getElementById("cmd-input").addEventListener("input", (e) => { renderCommands(e.target.value.toLowerCase()); });
+        function renderCommands(query) {
+            let resBox = document.getElementById("cmd-results"); resBox.innerHTML = ""; currentFilteredCommands = appCommands.filter(c => c.title.toLowerCase().includes(query)); cmdSelectedIndex = 0;
+            if (currentFilteredCommands.length === 0) { resBox.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted);">No commands found.</div>`; return; }
+            currentFilteredCommands.forEach((cmd, i) => { let isSel = i === cmdSelectedIndex ? "selected" : ""; let item = document.createElement("div"); item.className = `cmd-item ${isSel}`; item.id = `cmd-item-${i}`; item.innerHTML = `<i data-lucide="${cmd.icon}"></i> ${cmd.title} <span class="cmd-kbd">Enter</span>`; item.onclick = () => { cmd.action(); closeCommandPalette(); }; resBox.appendChild(item); });
+            lucide.createIcons();
+        }
+        function navigateCmd(dir) { if (currentFilteredCommands.length === 0) return; let items = document.querySelectorAll(".cmd-item"); items[cmdSelectedIndex].classList.remove("selected"); cmdSelectedIndex += dir; if (cmdSelectedIndex < 0) cmdSelectedIndex = currentFilteredCommands.length - 1; if (cmdSelectedIndex >= currentFilteredCommands.length) cmdSelectedIndex = 0; items[cmdSelectedIndex].classList.add("selected"); items[cmdSelectedIndex].scrollIntoView({ block: "nearest" }); }
+        function executeSelectedCmd() { if (currentFilteredCommands.length === 0) return; currentFilteredCommands[cmdSelectedIndex].action(); closeCommandPalette(); }
+
+        // --- V7.3 TRUE P2P ENGINE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCK6t5FwsbWcs4pDjuAm4_SPp-ge3x-XM",
+            authDomain: "techace-2f17b.firebaseapp.com",
+            projectId: "techace-2f17b",
+            storageBucket: "techace-2f17b.firebasestorage.app",
+            messagingSenderId: "512647420588",
+            appId: "1:512647420588:web:f6f1f55e6e78d1109e9d09"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let networkUser = localStorage.getItem("techace_net_user") || "";
+        let avatarColor = localStorage.getItem("techace_net_color") || "#5c85ff";
+        let activeRoomId = "general";
+        let liveChatListener = null;
+        let userDirectoryUnsubscribe = null;
+        let callTickerInterval = null;
+        let isMuted = false, isCamOff = false, isScreenSharing = false;
+
+        let globalUserColors = {};
+
+        let myPeer = null;
+        let currentRemoteCall = null;
+        let remoteStream = null;
+        let webcamStream = null;
+        let screenStream = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            evaluateNetworkUserState();
+            db.collection("network_users").onSnapshot(snap => {
+                snap.forEach(doc => { globalUserColors[doc.id] = doc.data().avatarColor || "var(--accent-color)"; });
+            });
+        });
+
+        // ⚡ V7.6 CLOUD EMAIL AUTO-LOGIN LOOKUP
+        async function evaluateNetworkUserState() {
+            let settings = await eel.get_settings()();
+            let userEmail = settings.email;
+
+            if (!userEmail) {
+                document.getElementById("net-core-chat-window-viewport").innerHTML = `<div style="text-align:center; margin-top:100px;"><i data-lucide="lock" style="width:50px; height:50px; color:#FF0055; margin-bottom:15px;"></i><h3 style="color:white;">Authentication Required</h3><p style="color:var(--text-muted);">You must link your Technion Microsoft Email in the System Settings before accessing the network.</p></div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            if (!networkUser) {
+                // Check if this specific email is already registered in the database
+                db.collection("network_users").where("email", "==", userEmail.toLowerCase()).get().then((snapshot) => {
+                    if (!snapshot.empty) {
+                        // Match found! Auto-restore session settings across instances
+                        let existingDoc = snapshot.docs[0].data();
+                        localStorage.setItem("techace_net_user", existingDoc.username);
+                        localStorage.setItem("techace_net_color", existingDoc.avatarColor || "#5c85ff");
+                        networkUser = existingDoc.username;
+                        avatarColor = existingDoc.avatarColor || "#5c85ff";
+
+                        // Boot directly into the app framework
+                        document.getElementById("net-auth-setup-overlay").style.display = "none";
+                        document.getElementById("net-core-chat-window-viewport").style.display = "flex";
+                        initializeNetworkUserSession(userEmail);
+                    } else {
+                        // Genuinely a brand new account scenario
+                        document.getElementById("net-core-chat-window-viewport").style.display = "none";
+                        document.getElementById("net-auth-setup-overlay").style.display = "flex";
+                        document.getElementById("auth-linked-email-display").innerText = "Verified Identity: " + userEmail;
+                    }
+                }).catch(() => {
+                    document.getElementById("net-auth-setup-overlay").style.display = "flex";
+                });
+            } else {
+                initializeNetworkUserSession(userEmail);
+            }
+        }
+
+        // ⚡ ENSURE SIDEBAR RESTORES PROPERLY ON RESTART
+        function initializeNetworkUserSession(userEmail) {
+            document.getElementById("my-profile-name-str").innerText = networkUser;
+
+            let avatar = document.getElementById("my-avatar-indicator");
+            let savedPfp = localStorage.getItem("techace_net_pfp_img");
+            let pZoom = localStorage.getItem("techace_net_pfp_zoom") || "100";
+            let pY = localStorage.getItem("techace_net_pfp_y") || "50";
+
+            if (savedPfp) {
+                avatar.innerText = "";
+                avatar.style.backgroundImage = `url('${savedPfp}')`;
+                avatar.style.backgroundSize = `${pZoom}%`;
+                avatar.style.backgroundPosition = `center ${pY}%`;
+                avatar.style.backgroundColor = "transparent";
+            } else {
+                avatar.innerText = networkUser.charAt(0).toUpperCase();
+                avatar.style.backgroundImage = "none";
+                avatar.style.backgroundColor = avatarColor;
+            }
+
+            db.collection("network_users").doc(networkUser.toLowerCase()).set({
+                username: networkUser, email: userEmail.toLowerCase(), avatarColor: avatarColor, lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            setInterval(() => { if (networkUser) db.collection("network_users").doc(networkUser.toLowerCase()).update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); }, 60000);
+
+            if (!myPeer) {
+                myPeer = new Peer("techace_" + networkUser.toLowerCase());
+                myPeer.on('call', (call) => {
+                    currentRemoteCall = call;
+                    let callerName = call.peer.replace("techace_", "");
+                    document.getElementById("incoming-call-name").innerText = callerName;
+                    document.getElementById("incoming-call-avatar").innerText = callerName.charAt(0).toUpperCase();
+                    document.getElementById("net-incoming-call-modal").classList.add("active");
+                });
+            }
+            syncGlobalUserDirectoryPool();
+            switchActiveChatRoom(activeRoomId);
+        }
+
+        // ⚡ NEW: Instant Message Deletion
+        function deleteNetworkMessage(msgId) {
+            db.collection("network_rooms").doc(activeRoomId).collection("messages").doc(msgId).delete();
+            showToast("Message Erased", "#FF0055");
+        }
+
+        function commitNetworkRegistrationAccount() {
+            let input = document.getElementById("net-username-register-input").value.trim();
+            if (!input || input.toLowerCase() === "general") { alert("Please enter a valid unique profile name."); return; }
+            localStorage.setItem("techace_net_user", input);
+            localStorage.setItem("techace_net_color", "#5c85ff");
+            networkUser = input; avatarColor = "#5c85ff";
+            evaluateNetworkUserState();
+        }
+
+        function triggerCustomLogoutModal() { document.getElementById('net-logout-confirmation-modal').classList.add('active'); }
+        function commitNetworkProfileLogout() { localStorage.removeItem("techace_net_user"); localStorage.removeItem("techace_net_color"); networkUser = ""; location.reload(); }
+
+        // ⚡ V7.7 PROFILE INTERACTION ENGINE
+        let profileTargetUser = "";
+
+        // ⚡ V7.8 DISCORD RENDERING ENGINE PIPELINE
+
+        // ⚡ V8.1 COMPRESSION ENGINE & EXPLICIT CSS PROFILE HANDLER
+        let temporaryPfpBase64 = "";
+        let temporaryBannerBase64 = "";
+
+        function openProfileCustomizerModal() {
+            document.getElementById("customizer-name-preview").innerText = networkUser;
+
+            document.getElementById("net-custom-status-input").value = localStorage.getItem("techace_net_status") || "";
+            document.getElementById("net-about-me-input").value = localStorage.getItem("techace_net_bio") || "";
+            document.getElementById("net-badge-input").value = localStorage.getItem("techace_net_badge") || "🎓 Technion Student";
+            document.getElementById("net-theme-color-1").value = localStorage.getItem("techace_net_color1") || "#5c85ff";
+            document.getElementById("net-theme-color-2").value = localStorage.getItem("techace_net_color2") || "#9d4edd";
+
+            document.getElementById("crop-pfp-zoom").value = localStorage.getItem("techace_net_pfp_zoom") || "100";
+            document.getElementById("crop-pfp-y").value = localStorage.getItem("techace_net_pfp_y") || "50";
+            document.getElementById("crop-banner-y").value = localStorage.getItem("techace_net_banner_y") || "50";
+
+            temporaryPfpBase64 = localStorage.getItem("techace_net_pfp_img") || "";
+            temporaryBannerBase64 = localStorage.getItem("techace_net_banner_img") || "";
+
+            previewCustomizedProfileState();
+            document.getElementById("net-profile-customizer-modal").classList.add("active");
+            lucide.createIcons();
+        }
+
+        // ⚡ NEW: HTML5 Image Compressor (Bypasses the 5MB Crash)
+        function processImageUploadBlob(inputElement, type) {
+            let file = inputElement.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function (e) {
+                let img = new Image();
+                img.onload = function () {
+                    let canvas = document.createElement('canvas');
+                    let ctx = canvas.getContext('2d');
+
+                    // Compress sizing down to standard Discord limits
+                    let MAX_WIDTH = type === 'banner' ? 1000 : 400;
+                    let MAX_HEIGHT = type === 'banner' ? 500 : 400;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to lightweight JPEG string
+                    let compressedStr = canvas.toDataURL('image/jpeg', 0.8);
+
+                    if (type === 'pfp') temporaryPfpBase64 = compressedStr;
+                    if (type === 'banner') temporaryBannerBase64 = compressedStr;
+
+                    previewCustomizedProfileState();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            inputElement.value = ""; // Reset input
+        }
+
+        function clearUploadedAsset(type) {
+            if (type === 'pfp') temporaryPfpBase64 = "";
+            else temporaryBannerBase64 = "";
+            previewCustomizedProfileState();
+        }
+
+        function previewCustomizedProfileState() {
+            try {
+                let sText = document.getElementById("net-custom-status-input").value.trim();
+                document.getElementById("customizer-status-preview").innerText = sText || "Set a profile mood status...";
+
+                let col1 = document.getElementById("net-theme-color-1").value;
+                let col2 = document.getElementById("net-theme-color-2").value;
+
+                let pZoom = document.getElementById("crop-pfp-zoom").value;
+                let pY = document.getElementById("crop-pfp-y").value;
+                let bY = document.getElementById("crop-banner-y").value;
+
+                document.getElementById("lbl-val-pfp-zoom").innerText = pZoom;
+                document.getElementById("lbl-val-banner-y").innerText = bY;
+
+                let avPreview = document.getElementById("customizer-avatar-preview");
+                let bnPreview = document.getElementById("customizer-banner-preview");
+
+                // Explicit CSS Overrides
+                if (temporaryPfpBase64) {
+                    avPreview.innerText = "";
+                    avPreview.style.backgroundImage = `url('${temporaryPfpBase64}')`;
+                    avPreview.style.backgroundSize = `${pZoom}%`;
+                    avPreview.style.backgroundPosition = `center ${pY}%`;
+                    avPreview.style.backgroundColor = "transparent";
+                } else {
+                    avPreview.style.backgroundImage = "none";
+                    avPreview.style.backgroundColor = col1;
+                    avPreview.innerText = networkUser.charAt(0).toUpperCase();
+                }
+
+                if (temporaryBannerBase64) {
+                    bnPreview.style.backgroundImage = `url('${temporaryBannerBase64}')`;
+                    bnPreview.style.backgroundSize = `cover`;
+                    bnPreview.style.backgroundPosition = `center ${bY}%`;
+                    bnPreview.style.backgroundColor = "transparent";
+                } else {
+                    bnPreview.style.backgroundImage = "none";
+                    bnPreview.style.backgroundColor = col2;
+                }
+            } catch (err) { console.error("Preview render failed:", err); }
+        }
+
+        function saveCustomizedProfileSettings() {
+            try {
+                let status = document.getElementById("net-custom-status-input").value.trim();
+                let bio = document.getElementById("net-about-me-input").value.trim();
+                let badge = document.getElementById("net-badge-input").value;
+
+                let col1 = document.getElementById("net-theme-color-1").value;
+                let col2 = document.getElementById("net-theme-color-2").value;
+
+                let pZoom = document.getElementById("crop-pfp-zoom").value;
+                let pY = document.getElementById("crop-pfp-y").value;
+                let bY = document.getElementById("crop-banner-y").value;
+
+                localStorage.setItem("techace_net_status", status);
+                localStorage.setItem("techace_net_bio", bio);
+                localStorage.setItem("techace_net_badge", badge);
+                localStorage.setItem("techace_net_color1", col1);
+                localStorage.setItem("techace_net_color2", col2);
+
+                localStorage.setItem("techace_net_pfp_zoom", pZoom);
+                localStorage.setItem("techace_net_pfp_y", pY);
+                localStorage.setItem("techace_net_banner_y", bY);
+
+                localStorage.setItem("techace_net_pfp_img", temporaryPfpBase64);
+                localStorage.setItem("techace_net_banner_img", temporaryBannerBase64);
+
+                avatarColor = col1;
+                localStorage.setItem("techace_net_color", col1);
+
+                // Sync sidebar instantly
+                let sidebarAv = document.getElementById("my-avatar-indicator");
+                if (temporaryPfpBase64) {
+                    sidebarAv.innerText = "";
+                    sidebarAv.style.backgroundImage = `url('${temporaryPfpBase64}')`;
+                    sidebarAv.style.backgroundSize = `${pZoom}%`;
+                    sidebarAv.style.backgroundPosition = `center ${pY}%`;
+                    sidebarAv.style.backgroundColor = "transparent";
+                } else {
+                    sidebarAv.style.backgroundImage = "none";
+                    sidebarAv.style.backgroundColor = col1;
+                    sidebarAv.innerText = networkUser.charAt(0).toUpperCase();
+                }
+
+                db.collection("network_users").doc(networkUser.toLowerCase()).update({
+                    statusText: status, bio: bio, badge: badge,
+                    avatarColor: col1, themeColor2: col2,
+                    pfpImageStr: temporaryPfpBase64, bannerImageStr: temporaryBannerBase64,
+                    pfpZoom: pZoom, pfpY: pY, bannerY: bY
+                });
+
+                document.getElementById("net-profile-customizer-modal").classList.remove("active");
+                showToast("Profile Synced Globally!", "#38B000");
+            } catch (err) {
+                showToast("Error: Profile too large to save.", "#FF0055");
+                console.error(err);
+            }
+        }
+
+
+
+        // ⚡ EXTENDED READ: Open and render someone else's customizable card space
+        let activeProfileListener = null;
+
+        function openUserProfile(username) {
+            profileTargetUser = username;
+            if (activeProfileListener) activeProfileListener();
+
+            activeProfileListener = db.collection("network_users").doc(username.toLowerCase()).onSnapshot((doc) => {
+                if (!doc.exists) return;
+                let data = doc.data();
+
+                document.getElementById("profile-modal-name").innerText = data.username;
+                document.getElementById("profile-modal-status-text").innerText = data.statusText ? `"${data.statusText}"` : "No status set.";
+                document.getElementById("profile-modal-bio").innerText = data.bio || "No biography details written yet.";
+                document.getElementById("profile-modal-badge").innerText = data.badge || "🎓 Technion Student";
+
+                let av = document.getElementById("profile-modal-avatar");
+                let bn = document.getElementById("profile-modal-banner");
+
+                let c1 = data.avatarColor || "#5c85ff";
+                let c2 = data.themeColor2 || "#9d4edd";
+
+                let pZoom = data.pfpZoom || "100";
+                let pY = data.pfpY || "50";
+                let bY = data.bannerY || "50";
+
+                // ⚡ FIX: Explicit CSS
+                if (data.pfpImageStr) {
+                    av.innerText = "";
+                    av.style.backgroundImage = `url('${data.pfpImageStr}')`;
+                    av.style.backgroundSize = `${pZoom}%`;
+                    av.style.backgroundPosition = `center ${pY}%`;
+                    av.style.backgroundColor = "transparent";
+                } else {
+                    av.style.backgroundImage = "none";
+                    av.style.backgroundColor = c1;
+                    av.innerText = data.username.charAt(0).toUpperCase();
+                }
+
+                if (data.bannerImageStr) {
+                    bn.style.backgroundImage = `url('${data.bannerImageStr}')`;
+                    bn.style.backgroundSize = "cover";
+                    bn.style.backgroundPosition = `center ${bY}%`;
+                    bn.style.backgroundColor = "transparent";
+                } else {
+                    bn.style.backgroundImage = "none";
+                    bn.style.backgroundColor = c2;
+                }
+
+                let now = new Date().getTime();
+                let isOnline = false;
+                if (data.lastSeen && data.lastSeen.toMillis) {
+                    if ((now - data.lastSeen.toMillis()) < 180000) isOnline = true;
+                }
+
+                let statusEl = document.getElementById("profile-modal-status");
+                statusEl.innerText = isOnline ? "● Online" : "○ Offline";
+                statusEl.style.color = isOnline ? "#38B000" : "var(--text-muted)";
+
+                let radarBox = document.getElementById("profile-modal-timer-radar");
+                let radarTimer = document.getElementById("profile-modal-radar-time");
+
+                if (isOnline && data.activeTimerString) {
+                    radarBox.style.display = "flex";
+                    radarTimer.innerText = data.activeTimerString;
+                } else {
+                    radarBox.style.display = "none";
+                }
+            });
+
+            document.getElementById("net-user-profile-modal").classList.add("active");
+            lucide.createIcons();
+        }
+
+        function startChatFromProfile() {
+            document.getElementById("net-user-profile-modal").classList.remove("active");
+            if (profileTargetUser) {
+                let uNameLower = profileTargetUser.toLowerCase();
+                let targetRoom = [networkUser.toLowerCase(), uNameLower].sort().join("_dm_");
+
+                // Automatically add them to your explicit friends list
+                let activeDMs = JSON.parse(localStorage.getItem("techace_active_dms") || "[]");
+                if (!activeDMs.includes(uNameLower)) {
+                    activeDMs.push(uNameLower);
+                    localStorage.setItem("techace_active_dms", JSON.stringify(activeDMs));
+                }
+                switchActiveChatRoom(targetRoom, profileTargetUser);
+            }
+        }
+
+        function syncGlobalUserDirectoryPool() {
+            if (userDirectoryUnsubscribe) userDirectoryUnsubscribe();
+
+            // ⚡ FIX: Only pull people you have explicitly started a conversation with!
+            let activeDMs = JSON.parse(localStorage.getItem("techace_active_dms") || "[]");
+
+            userDirectoryUnsubscribe = db.collection("network_users").onSnapshot((snapshot) => {
+                let pool = document.getElementById("direct-messages-pool-list");
+                if (!pool) return;
+                let htmlBuffer = "";
+                let now = new Date().getTime(); // Current local time for comparison
+
+                snapshot.forEach((doc) => {
+                    let uData = doc.data();
+                    let uNameLower = uData.username.toLowerCase();
+                    if (uNameLower === networkUser.toLowerCase()) return;
+
+                    // IF NOT IN YOUR FRIENDS LIST, DO NOT RENDER IN SIDEBAR
+                    if (!activeDMs.includes(uNameLower)) return;
+
+                    let targetRoom = [networkUser.toLowerCase(), uNameLower].sort().join("_dm_");
+                    let isActive = activeRoomId === targetRoom ? "active" : "";
+                    let uColor = uData.avatarColor || "var(--accent-color)";
+
+                    // ⚡ REAL-TIME ONLINE TRACKER: Checks if they've pinged in the last 3 minutes
+                    let isOnline = false;
+                    if (uData.lastSeen && uData.lastSeen.toMillis) {
+                        if ((now - uData.lastSeen.toMillis()) < 180000) isOnline = true;
+                    }
+
+                    let statusColor = isOnline ? "#38B000" : "var(--text-muted)";
+                    let statusText = isOnline ? "Online" : "Offline";
+                    let glow = isOnline ? `box-shadow: 0 0 8px ${statusColor};` : "";
+                    let safeName = uData.username.replace(/'/g, "\\'");
+                    // Check if target peer has uploaded custom images or chose colors instead
+                    let pZoom = uData.pfpZoom || "100";
+                    let pY = uData.pfpY || "50";
+                    let customAvStyle = uData.pfpImageStr ? `background-image:url('${uData.pfpImageStr}'); background-size:${pZoom}%; background-position:center ${pY}%;` : `background:${uColor};`;
+                    let avatarInitial = uData.pfpImageStr ? "" : uData.username.charAt(0).toUpperCase();
+
+                    htmlBuffer += `
+                                                    <div style="position:relative; margin-bottom:4px;" class="dm-row-wrapper">
+                                                        <button class="chat-row-btn ${isActive}" onclick="switchActiveChatRoom('${targetRoom}', '${safeName}')" style="padding-right:40px; width:100%;">
+                                                            <div class="avatar-circle" onclick="openUserProfile('${safeName}'); event.stopPropagation();" style="width:30px; height:30px; color:white; cursor:pointer; transition: 0.2s; ${glow} ${customAvStyle}" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">${avatarInitial}</div>
+                                                            <div style="display:flex; flex-direction:column; text-align:left;">
+                                                                <span style="font-weight:600; color:white; font-size:0.85rem;">${uData.username}</span>
+                                                                <span style="font-size:0.7rem; color:${statusColor}; font-weight: bold;">${statusText}</span>
+                                                            </div>
+                                                        </button>
+                                                        <span onclick="removeDMFromSidebar('${uNameLower}', '${targetRoom}'); event.stopPropagation();" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--text-muted); opacity:0.4; font-size:0.8rem; font-weight:bold; z-index:10;" onmouseover="this.style.opacity=1; this.style.color='#FF0055';" onmouseout="this.style.opacity=0.4; this.style.color='var(--text-muted)';">✕</span>
+                                                    </div>`;
+                });
+                pool.innerHTML = htmlBuffer;
+            });
+        }
+
+        function removeDMFromSidebar(targetUserLower, roomId) {
+            let activeDMs = JSON.parse(localStorage.getItem("techace_active_dms") || "[]");
+            activeDMs = activeDMs.filter(u => u !== targetUserLower);
+            localStorage.setItem("techace_active_dms", JSON.stringify(activeDMs));
+
+            if (activeRoomId === roomId) switchActiveChatRoom('general');
+            syncGlobalUserDirectoryPool();
+        }
+
+        function confirmNewPrivateChat() {
+            let user = document.getElementById('net-dm-username-input').value.trim();
+            if (user) {
+                let uNameLower = user.toLowerCase();
+                let targetRoom = [networkUser.toLowerCase(), uNameLower].sort().join("_dm_");
+
+                // Add to active explicit friends list
+                let activeDMs = JSON.parse(localStorage.getItem("techace_active_dms") || "[]");
+                if (!activeDMs.includes(uNameLower)) {
+                    activeDMs.push(uNameLower);
+                    localStorage.setItem("techace_active_dms", JSON.stringify(activeDMs));
+                }
+
+                switchActiveChatRoom(targetRoom, user);
+                document.getElementById('net-new-dm-modal').classList.remove('active');
+            }
+        }
+
+        // ⚡ NEW: PERMANENT ACCOUNT ERASURE
+        function deleteNetworkAccountAccount() {
+            if (confirm("🚨 DANGER ZONE: Are you completely sure you want to permanently delete your TechAce Profile? This wipes your username records entirely from the network directory.")) {
+                db.collection("network_users").doc(networkUser.toLowerCase()).delete().then(() => {
+                    localStorage.removeItem("techace_net_user");
+                    localStorage.removeItem("techace_net_color");
+                    networkUser = "";
+                    showToast("Account Deleted", "#FF0055");
+                    location.reload();
+                });
+            }
+        }
+
+        function switchActiveChatRoom(roomId, roomDisplayName = "General Hub") {
+            activeRoomId = roomId;
+            document.querySelectorAll(".chat-row-btn").forEach(b => b.classList.remove("active"));
+            let headerActions = document.getElementById("chat-header-action-buttons-wrapper");
+            if (headerActions) headerActions.style.display = "flex";
+
+            if (roomId === "general") {
+                let genBtn = document.getElementById("btn-room-general");
+                if (genBtn) genBtn.classList.add("active");
+                let activeAvatar = document.getElementById("active-room-title-avatar");
+                activeAvatar.innerText = "#";
+                activeAvatar.style.backgroundColor = "rgba(255,255,255,0.1)";
+                document.getElementById("active-room-header-title-string").innerText = "General Hub";
+            } else {
+                let activeHeaderAvatar = document.getElementById("active-room-title-avatar");
+                activeHeaderAvatar.innerText = roomDisplayName.charAt(0).toUpperCase();
+                activeHeaderAvatar.style.backgroundColor = "var(--accent-color)";
+                document.getElementById("active-room-header-title-string").innerText = roomDisplayName;
+                let buttons = document.querySelectorAll("#direct-messages-pool-list .chat-row-btn");
+                buttons.forEach(btn => { if (btn.innerText.includes(roomDisplayName)) btn.classList.add("active"); });
+            }
+            bindActiveRoomViewportStream();
+        }
+
+        function promptNewPrivateChat() {
+            document.getElementById('net-new-dm-modal').classList.add('active');
+            document.getElementById('net-dm-username-input').value = "";
+            document.getElementById('net-dm-username-input').focus();
+        }
+
+
+        function bindActiveRoomViewportStream() {
+            if (liveChatListener) liveChatListener();
+            let viewport = document.getElementById("cloud-chat-box");
+            if (!viewport) return;
+            viewport.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic;">Syncing room data frame...</div>`;
+
+            liveChatListener = db.collection("network_rooms").doc(activeRoomId).collection("messages")
+                .orderBy("timestamp", "asc").limitToLast(60).onSnapshot((snapshot) => {
+                    if (snapshot.empty) { viewport.innerHTML = `<div style="text-align:center; margin-top:auto; color:var(--text-muted); font-size:0.85rem; font-style:italic;">🔒 Secured room space established. Say hello!</div>`; return; }
+
+                    let htmlBuffer = "";
+                    snapshot.forEach((doc) => {
+                        let msg = doc.data();
+                        let currentMsgAuthorLower = String(msg.author).toLowerCase();
+                        let isMine = currentMsgAuthorLower === networkUser.toLowerCase();
+                        let containerClass = isMine ? "mine" : "others";
+                        let processedText = parseTextMarkupLinks(msg.text || "");
+                        let attachmentHtml = "";
+                        let finalUserColor = isMine ? avatarColor : (globalUserColors[currentMsgAuthorLower] || "var(--accent-color)");
+
+                        if (msg.fileData) {
+                            if (msg.fileType && msg.fileType.startsWith("image/")) { attachmentHtml = `<img src="${msg.fileData}" class="msg-media-attachment" onclick="window.open('${msg.fileData}', '_blank')">`; }
+                            else { attachmentHtml = `<a href="${msg.fileData}" download="${msg.fileName || 'file'}" class="msg-file-pill">📄 <span>${msg.fileName || 'Download Attachment'}</span></a>`; }
+                        }
+
+                        // ⚡ INJECTS THE DELETE BUTTON ONLY ON YOUR MESSAGES
+                        let deleteBtnHtml = isMine ? `<span style="float:right; cursor:pointer; opacity:0.5;" onclick="deleteNetworkMessage('${doc.id}')" onmouseover="this.style.opacity=1; this.style.color='#FF0055';" onmouseout="this.style.opacity=0.5; this.style.color='inherit';">✖</span>` : "";
+
+                        htmlBuffer += `<div class="net-msg-container ${containerClass}"><div class="net-msg-bubble"><div class="msg-meta-header" style="color: ${isMine ? '#4fe3c1' : finalUserColor};">${msg.author} ${deleteBtnHtml}</div><div style="word-break:break-word;">${processedText}</div>${attachmentHtml}</div></div>`;
+                    });
+
+                    viewport.innerHTML = htmlBuffer;
+                    viewport.scrollTop = viewport.scrollHeight;
+                });
+        }
+
+        function parseTextMarkupLinks(text) {
+            let expression = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(expression, '<a href="$1" onclick="openTaskLink(\'$1\'); event.preventDefault();" style="color:var(--accent-color); font-weight:600; text-decoration:underline;">$1</a>');
+        }
+
+        function sendNetworkMessage() {
+            let input = document.getElementById("cloud-msg-input");
+            let text = input.value.trim();
+            if (!text) return;
+            db.collection("network_rooms").doc(activeRoomId).collection("messages").add({ text: text, author: networkUser, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            input.value = "";
+        }
+
+        function processFileAttachmentUploadSelection(inputElement) {
+            let file = inputElement.files[0];
+            if (!file) return;
+            if (file.size > 1500000) { alert("To preserve space, direct app attachment limits are configured to 1.5MB max size."); return; }
+            let reader = new FileReader();
+            let chatView = document.getElementById("cloud-chat-box");
+            chatView.innerHTML += `<div id="net-upload-loading-placeholder" style="align-self:flex-end; color:var(--text-muted); font-size:0.8rem; font-style:italic;">Encoding document attachment payload...</div>`;
+            reader.onload = function (e) {
+                db.collection("network_rooms").doc(activeRoomId).collection("messages").add({ text: `📎 Shared an attachment: ${file.name}`, author: networkUser, fileName: file.name, fileType: file.type, fileData: e.target.result, timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+                    .then(() => { let placeholder = document.getElementById("net-upload-loading-placeholder"); if (placeholder) placeholder.remove(); });
+            };
+            reader.readAsDataURL(file);
+            inputElement.value = "";
+        }
+
+        // --- V7.4 PRO P2P CALL ENGINE ---
+
+        async function loadHardwareDevicesIntoDropdowns() {
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                let micDropdown = document.getElementById("call-mic-select-dropdown");
+                let camDropdown = document.getElementById("call-cam-select-dropdown");
+                let speakerDropdown = document.getElementById("call-speaker-select-dropdown");
+
+                micDropdown.innerHTML = ""; camDropdown.innerHTML = ""; speakerDropdown.innerHTML = "";
+
+                devices.forEach(device => {
+                    let option = document.createElement("option");
+                    option.value = device.deviceId;
+                    option.text = device.label || `${device.kind} (${device.deviceId.slice(0, 5)}...)`;
+                    if (device.kind === "audioinput") micDropdown.appendChild(option);
+                    else if (device.kind === "videoinput") camDropdown.appendChild(option);
+                    else if (device.kind === "audiooutput") speakerDropdown.appendChild(option);
+                });
+                if (micDropdown.length === 0) micDropdown.innerHTML = `<option value="none">No Mic Found</option>`;
+                if (camDropdown.length === 0) camDropdown.innerHTML = `<option value="none">No Camera Found</option>`;
+                if (speakerDropdown.length === 0) speakerDropdown.innerHTML = `<option value="none">No Speakers Found</option>`;
+            } catch (err) { console.warn("Media device permissions declined:", err); }
+        }
+
+        function getActiveMediaConstraints() {
+            let micId = document.getElementById("call-mic-select-dropdown").value;
+            let camId = document.getElementById("call-cam-select-dropdown").value;
+            let constraints = { audio: true, video: true }; // Always request both so WebRTC tunnel is ready
+            if (micId && micId !== "default" && micId !== "none") constraints.audio = { deviceId: { exact: micId } };
+            if (camId && camId !== "default" && camId !== "none") constraints.video = { deviceId: { exact: camId } };
+            return constraints;
+        }
+
+        // ⚡ NEW: Safely swaps the video feed going over the internet
+        function updatePeerVideoTrack(newTrack) {
+            if (currentRemoteCall && currentRemoteCall.peerConnection) {
+                let sender = currentRemoteCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender && newTrack) {
+                    sender.replaceTrack(newTrack);
+                }
+            }
+        }
+
+        async function switchHardwareDevice(type) {
+            if (type === 'speaker') {
+                let speakerId = document.getElementById("call-speaker-select-dropdown").value;
+                let vids = [document.getElementById("local-webcam-feed"), document.getElementById("remote-video-feed")];
+                for (let v of vids) {
+                    if (v.setSinkId && speakerId !== "none") { try { await v.setSinkId(speakerId === "default" ? "" : speakerId); } catch (e) { } }
+                }
+                return;
+            }
+
+            // Hotswap Mic/Cam without breaking connection
+            if (webcamStream) {
+                let newStream = await navigator.mediaDevices.getUserMedia(getActiveMediaConstraints());
+
+                let oldAudio = webcamStream.getAudioTracks()[0];
+                let newAudio = newStream.getAudioTracks()[0];
+                if (newAudio) {
+                    newAudio.enabled = !isMuted;
+                    let aSender = currentRemoteCall?.peerConnection?.getSenders().find(s => s.track && s.track.kind === 'audio');
+                    if (aSender) aSender.replaceTrack(newAudio);
+                    webcamStream.removeTrack(oldAudio); webcamStream.addTrack(newAudio); oldAudio.stop();
+                }
+
+                let oldVideo = webcamStream.getVideoTracks()[0];
+                let newVideo = newStream.getVideoTracks()[0];
+                if (newVideo) {
+                    newVideo.enabled = !isCamOff;
+                    if (!isScreenSharing) updatePeerVideoTrack(newVideo);
+                    webcamStream.removeTrack(oldVideo); webcamStream.addTrack(newVideo); oldVideo.stop();
+                }
+                document.getElementById("local-webcam-feed").srcObject = webcamStream;
+            }
+        }
+
+        function renderDualStreamUI() {
+            let wrapper = document.getElementById("video-streams-wrapper");
+            let screenVideo = document.getElementById("remote-video-feed");
+            let camVideo = document.getElementById("local-webcam-feed");
+            let avatarEl = document.getElementById("call-panel-avatar-icon");
+            let bigVideoActive = screenStream || remoteStream;
+
+            // ⚡ FIX: If camera is off and no one is screensharing, hide the video elements and show the Avatar!
+            if (isCamOff && !bigVideoActive) {
+                wrapper.style.display = "none";
+                avatarEl.style.display = "flex";
+                avatarEl.classList.add("spin"); // Optional: Makes the avatar glow/spin when in a voice call
+                return;
+            }
+
+            // Otherwise, render the video layouts
+            avatarEl.classList.remove("spin");
+            if (webcamStream || bigVideoActive) { wrapper.style.display = "flex"; avatarEl.style.display = "none"; }
+            else { wrapper.style.display = "none"; avatarEl.style.display = "flex"; }
+
+            if (webcamStream && bigVideoActive) {
+                wrapper.style.position = "relative";
+                screenVideo.style.display = "block"; screenVideo.style.width = "100%"; screenVideo.style.maxHeight = "500px"; screenVideo.style.borderRadius = "12px"; screenVideo.style.border = "2px solid var(--accent-color)";
+                camVideo.style.display = isCamOff ? "none" : "block"; camVideo.style.position = "absolute"; camVideo.style.bottom = "20px"; camVideo.style.right = "20px"; camVideo.style.width = "180px"; camVideo.style.height = "auto"; camVideo.style.borderRadius = "10px"; camVideo.style.border = "3px solid #38B000"; camVideo.style.zIndex = "10";
+            } else if (bigVideoActive) {
+                wrapper.style.position = "static"; screenVideo.style.display = "block"; screenVideo.style.width = "100%"; screenVideo.style.maxHeight = "500px"; screenVideo.style.borderRadius = "12px"; screenVideo.style.border = "2px solid var(--accent-color)";
+                camVideo.style.display = "none";
+            } else if (webcamStream) {
+                wrapper.style.position = "static"; screenVideo.style.display = "none";
+                camVideo.style.display = isCamOff ? "none" : "block"; camVideo.style.position = "static"; camVideo.style.width = "100%"; camVideo.style.maxWidth = "600px"; camVideo.style.maxHeight = "400px"; camVideo.style.borderRadius = "12px"; camVideo.style.border = "2px solid #38B000";
+            }
+        }
+
+        async function acceptIncomingCall() {
+            document.getElementById("net-incoming-call-modal").classList.remove("active");
+            document.getElementById("net-core-chat-window-viewport").style.display = "none";
+            document.getElementById("net-active-call-suite-panel").style.display = "flex";
+            document.getElementById("call-panel-target-identity").innerText = currentRemoteCall.peer.replace("techace_", "");
+
+            document.getElementById("call-panel-status-ticker").innerText = "SECURE UPLINK ESTABLISHED";
+            document.getElementById("call-panel-status-ticker").style.color = "#38B000";
+
+            await loadHardwareDevicesIntoDropdowns();
+            webcamStream = await navigator.mediaDevices.getUserMedia(getActiveMediaConstraints());
+
+            // Assume voice call initially unless they toggle it
+            isCamOff = true;
+            webcamStream.getVideoTracks().forEach(t => t.enabled = false);
+            document.getElementById("btn-call-toggle-vid").style.background = "rgba(255,255,255,0.05)";
+
+            document.getElementById("local-webcam-feed").srcObject = webcamStream;
+
+            currentRemoteCall.answer(webcamStream);
+            currentRemoteCall.on('stream', (rStream) => {
+                remoteStream = rStream;
+                document.getElementById("remote-video-feed").srcObject = remoteStream;
+                renderDualStreamUI();
+            });
+            renderDualStreamUI();
+        }
+
+        function rejectIncomingCall() {
+            document.getElementById("net-incoming-call-modal").classList.remove("active");
+            if (currentRemoteCall) currentRemoteCall.close();
+            currentRemoteCall = null;
+        }
+
+        async function initializeNetworkCallProtocol(callType) {
+            let targetIdentity = document.getElementById("active-room-header-title-string").innerText;
+            if (targetIdentity === "General Hub") { showToast("P2P Encrypted Calls are only available in Direct Messages!", "#FF0055"); return; }
+
+            document.getElementById("net-core-chat-window-viewport").style.display = "none";
+            document.getElementById("net-active-call-suite-panel").style.display = "flex";
+            document.getElementById("call-panel-target-identity").innerText = targetIdentity;
+            document.getElementById("call-panel-avatar-icon").innerText = targetIdentity.charAt(0).toUpperCase();
+
+            let ticker = document.getElementById("call-panel-status-ticker");
+            ticker.innerText = `RINGING SECURE VIA P2P NODE...`;
+            ticker.style.color = "var(--accent-color)";
+            await loadHardwareDevicesIntoDropdowns();
+
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia(getActiveMediaConstraints());
+                document.getElementById("local-webcam-feed").srcObject = webcamStream;
+
+                // ⚡ FIX: Handles Voice vs Video calls properly on launch
+                if (callType === 'voice') {
+                    isCamOff = true;
+                    webcamStream.getVideoTracks().forEach(t => t.enabled = false);
+                    document.getElementById("btn-call-toggle-vid").style.background = "rgba(255,255,255,0.05)";
+                } else {
+                    isCamOff = false;
+                    document.getElementById("btn-call-toggle-vid").style.background = "#38B000";
+                }
+
+                currentRemoteCall = myPeer.call("techace_" + targetIdentity.toLowerCase(), webcamStream);
+                currentRemoteCall.on('stream', (rStream) => {
+                    remoteStream = rStream;
+                    document.getElementById("remote-video-feed").srcObject = remoteStream;
+                    ticker.innerText = `UPLINK CONNECTED [SECURE]`;
+                    ticker.style.color = "#38B000";
+                    renderDualStreamUI();
+                });
+                renderDualStreamUI();
+            } catch (err) { console.error(err); showToast("Hardware Error: Could not access camera/mic.", "#FF0055"); }
+        }
+
+        function toggleCallVideoCamera() {
+            isCamOff = !isCamOff;
+            document.getElementById("btn-call-toggle-vid").style.background = isCamOff ? "rgba(255,255,255,0.05)" : "#38B000";
+
+            // ⚡ FIX: Disables track instead of stopping it so it doesn't freeze the P2P connection
+            if (webcamStream) {
+                webcamStream.getVideoTracks().forEach(t => t.enabled = !isCamOff);
+            }
+            renderDualStreamUI();
+        }
+
+        async function toggleCallScreenSharing() {
+            let btn = document.getElementById("btn-call-toggle-share");
+
+            if (!isScreenSharing) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    isScreenSharing = true;
+                    btn.style.background = "#38B000";
+
+                    // ⚡ FIX: Push screenshare to the other person!
+                    updatePeerVideoTrack(screenStream.getVideoTracks()[0]);
+
+                    screenStream.getVideoTracks()[0].onended = function () {
+                        isScreenSharing = false;
+                        screenStream = null;
+                        btn.style.background = "rgba(255,255,255,0.05)";
+                        // Revert back to webcam
+                        updatePeerVideoTrack(webcamStream ? webcamStream.getVideoTracks()[0] : null);
+                    };
+                } catch (err) { console.error("Screenshare denied:", err); }
+            } else {
+                isScreenSharing = false;
+                if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+                btn.style.background = "rgba(255,255,255,0.05)";
+                // Revert back to webcam
+                updatePeerVideoTrack(webcamStream ? webcamStream.getVideoTracks()[0] : null);
+            }
+        }
+
+        function toggleCallMicrophone() {
+            isMuted = !isMuted;
+            document.getElementById("btn-call-toggle-mic").style.background = isMuted ? "#FF0055" : "rgba(255,255,255,0.05)";
+            if (webcamStream) { webcamStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; }); }
+        }
+
+        function terminateActiveNetworkCall() {
+            if (callTickerInterval) clearInterval(callTickerInterval);
+
+            if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+            if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+            if (remoteStream) { remoteStream.getTracks().forEach(t => t.stop()); remoteStream = null; }
+
+            if (currentRemoteCall) { currentRemoteCall.close(); currentRemoteCall = null; }
+
+            isMuted = false; isCamOff = false; isScreenSharing = false;
+            document.getElementById("btn-call-toggle-mic").style.background = "rgba(255,255,255,0.05)";
+            document.getElementById("btn-call-toggle-vid").style.background = "rgba(255,255,255,0.05)";
+            document.getElementById("btn-call-toggle-share").style.background = "rgba(255,255,255,0.05)";
+
+            renderDualStreamUI();
+
+            document.getElementById("net-active-call-suite-panel").style.display = "none";
+            document.getElementById("net-core-chat-window-viewport").style.display = "flex";
+        }
+
+        document.getElementById("cloud-msg-input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendNetworkMessage(); });
+    </script>
+</body>
+</html>

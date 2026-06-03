@@ -1,0 +1,25 @@
+In lecture hours 25-26 we had a review lesson on the material of 
+the first half of the semester. We solved the midterm exam from
+the winter 2011-12 semester of 104006 (a parallel course of a
+somewhat easier level).
+
+The exam and the solutions are available in the files:
+	L25_26_Midterm_1112a.pdf  
+	L25_26_Midterm_solution_1112a.pdf
+
+This lesson also provided a chance to consider a system of linear
+equations with a parameter in my lectures - something which was 
+not done earlier in my lectures. (The tirgulim covered solving
+such problems.)
+
+Note 1: The level of this exam is a bit easier than is common for
+exams in our course. 
+
+Note 2: In some places the solutions done in class differ somewhat
+from those in the file.
+
+Note 3: Some topics are not covered in this midterm:
+  Sum and direct sum (taught in our course, but not in 104006)
+  Basis and dimension (was not in the material for that exam)
+
+
