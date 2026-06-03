@@ -7,7 +7,8 @@ import random
 import eel
 import re  # ⚡ Added Regex import for the Course Extractor
 
-from paths import CONFIG_FILE, COOKIE_FILE
+from paths import CONFIG_FILE, COOKIE_FILE, CHROME_DATA_DIR # Make sure to import it!
+
 
 def run_moodle_spider(force_refresh=False):
     if os.path.exists(CONFIG_FILE):
@@ -24,8 +25,11 @@ def run_moodle_spider(force_refresh=False):
     with sync_playwright() as p:
         print("\n🚀 Launching Moodle Spider Engine...")
         std_user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        browser = p.chromium.launch(headless=True) 
-        context = browser.new_context(user_agent=std_user_agent)
+        context = p.chromium.launch_persistent_context(
+        user_data_dir=CHROME_DATA_DIR,
+        headless=True,
+        user_agent=std_user_agent
+    )
         if os.path.exists(COOKIE_FILE):
             with open(COOKIE_FILE, 'r', encoding="utf-8") as f: context.add_cookies(json.load(f))
         page = context.new_page()

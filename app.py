@@ -23,7 +23,8 @@ import subprocess
 import sys
 import requests
 
-from paths import CONFIG_FILE, COOKIE_FILE
+# Replace your old CONFIG_FILE/COOKIE_FILE lines with:
+from paths import CONFIG_FILE, COOKIE_FILE, CHROME_DATA_DIR
 
 @eel.expose
 def check_for_updates():
@@ -70,25 +71,21 @@ _CACHED_EXAM_TEXT = ""
 
 
 def load_config():
-    default_config = {
-        "moodle_url": "", "cheesefork_url": "", "email": "", "password": "",
-        "gemini_api_key": "AIzaSyBpd2EXo3G3XrTQR_BxP2sLVJRPmAgmAMM", "transit_key": "", "wallpaper": "",
-        "bg_color": "#000000", "card_bg": "#070c1a", "accent_color": "#5c85ff", 
-        "font_family": "'Inter', sans-serif", "dimmer_opacity": 0.3, 
-        "card_opacity": 0.85, "browser_mode": "in_app",
-        "campaigns": [],
-        "webwork_tasks": [],
-        "completed_tasks": [],
-        "course_map": {}
-    }
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            try:
-                user_config = json.load(f)
-                default_config.update(user_config)
-            except:
-                pass
-    return default_config
+    from paths import CONFIG_FILE
+    print(f"DEBUG: Attempting to load config from: {CONFIG_FILE}")
+    
+    if not os.path.exists(CONFIG_FILE):
+        print("DEBUG: CONFIG FILE DOES NOT EXIST AT THAT PATH.")
+        return {}
+    
+    try:
+        with open(CONFIG_FILE, 'r', encoding="utf-8") as f:
+            data = json.load(f)
+            print("DEBUG: Config loaded successfully!")
+            return data
+    except Exception as e:
+        print(f"DEBUG: CRITICAL ERROR LOADING CONFIG: {e}")
+        return {}
 
 def save_config(config):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
