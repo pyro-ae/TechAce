@@ -720,6 +720,13 @@
                 let settings = await eel.get_settings()();
                 localStorage.setItem("techace_email", (settings.email || "").toLowerCase().trim());
                 applyThemeVariables(settings.bg_color, settings.card_bg, settings.accent_color, settings.font_family, settings.dimmer_opacity, settings.card_opacity, settings.wallpaper);
+
+                // ⚡ FIRST TIME SETUP CHECK: If no email/password exists, force the Onboarding Modal open!
+                if (!settings.email || !settings.password) {
+                    document.getElementById('onboarding-modal').classList.add('active');
+                    return; // Stop loading the rest of the app until they sign in
+                }
+
                 let data = await eel.get_initial_data()();
                 campaignPaths = data.full_paths;
                 let drop = document.getElementById("csv-dropdown"); drop.innerHTML = "";
@@ -730,8 +737,34 @@
                 loadExams();
             } catch (e) { console.log("Eel Not Connected."); }
             evaluateNetworkUserState();
-            checkAndShowUpdate(false); // ⚡ Silent update check on boot
+            checkAndShowUpdate(false);
         };
+
+        // --- ONBOARDING ENGINE ---
+        async function submitOnboarding() {
+            let email = document.getElementById("setup-email").value.trim();
+            let pwd = document.getElementById("setup-pass").value;
+
+            if (!email || !pwd) {
+                showToast("Technion Email and Password are required!", "#FF0055");
+                return;
+            }
+
+            let btn = document.querySelector("#onboarding-modal button");
+            btn.innerHTML = `<i data-lucide="loader" class="spin"></i> Initializing System...`;
+            btn.style.pointerEvents = "none";
+            lucide.createIcons();
+
+            // Save the credentials to the Python backend
+            await eel.save_settings({ "email": email, "password": pwd })();
+            localStorage.setItem("techace_email", email.toLowerCase());
+
+            document.getElementById('onboarding-modal').classList.remove('active');
+            showToast("System Initialized! Rebooting...", "#38B000");
+
+            // Refresh the app so it boots normally now that credentials exist
+            setTimeout(() => location.reload(), 1500);
+        }
 
         // --- 4. TIMER ENGINE ---
         function updateTimerDisplay() { let m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); let s = (timeLeft % 60).toString().padStart(2, '0'); document.getElementById("timer-display").innerText = `${m}:${s}`; }
